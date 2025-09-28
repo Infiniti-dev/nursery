@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sales Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #url-input { margin-bottom: 20px; }
+        canvas { max-width: 900px; margin-bottom: 40px; }
+        table { border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: right; }
+        th { background: #f9f9f9; text-align: center; }
+        h2 { margin-top: 40px; }
+    </style>
+</head>
+<body>
+<h1>📊 Sales Dashboard</h1>
+
+<div id="url-input">
+    <label>Google Sheet CSV URL: </label>
+    <input type="text" id="csvUrl" size="100" placeholder="Enter published CSV URL here">
+    <button onclick="loadData()">Load Data</button>
+</div>
+
+<h2>Daily Data</h2>
+<canvas id="salesChart"></canvas>
+
+<h2>Summary</h2>
+<div id="summary"></div>
+
+<h2>Month-on-Month Trends</h2>
+<canvas id="monthlyChart"></canvas>
+<div id="monthlyTable"></div>
+
+<script>
+  const defaultUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR3hyyYsE3dJcn54tB7p8WmfnTmit3mxvbSlA9O-u2DU3fsfPa0u6olmgSnOkeGOGAZUhrcNGtSlCT3/pub?gid=0&single=true&output=csv";
+
+  async function loadData() {
+    const url = document.getElementById("csvUrl").value || defaultUrl;
+    const response = await fetch(url);
+    const csvText = await response.text();
+
+    Papa.parse(csvText, {
+      header: true,
+      dynamicTyping: true,
+      complete: (results) => {
+        const rows = results.data.filter(r => r.Date && r.Sales);
+        processData(rows);
+      }
+    });
+  }
+
+  function processData(rows) {
+    const salesData = rows.map(r => ({
+      date: new Date(r.Date),
+      sales: +r.Sales || 0,
+      expense: +r.Expense || 0
+    }));
+
+    // Current month = latest month in dataset
+    const latest = salesData.reduce((max, d) => d.date > max ? d.date : max, new Date(0));
+    const curMonth = latest.getMonth();
+    const curYear = latest.getFullYear();
+
+    const currentMonth = salesData.filter(d => d.date.getMonth() === curMonth && d.date.getFullYear() === curYear);
+    const prevMonth = salesData.filter(d => d.date.getMonth() === curMonth-1 && d.date.getFullYear() === curYear);
+    const lastYear = salesData.filter(d => d.date.getMonth() === curMonth && d.date.getFullYear() === curYear-1);
+
+    function totals(arr) {
+      const sales = arr.reduce((sum, d) => sum + d.sales, 0);
+      const expense = arr.reduce((sum, d) => sum + d.expense, 0);
+      const profit = sales - expense;
+      const margin = sales ? ((profit / sales) * 100).toFixed(1) + "%" : "-";
+      return { sales, expense, profit, margin };
+    }
+
+    const currentTotals = totals(currentMonth);
+    const prevTotals = totals(prevMonth);
+    const lastYearTotals = totals(lastYear);
+
+    renderDailyChart(currentMonth);
+    renderSummary(currentTotals, prevTotals, lastYearTotals);
+    renderMonthlyView(salesData);
+  }
+
+  function renderDailyChart(data) {
+    const ctx = document.getElementById("salesChart").getContext("2d");
+    new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: data.map(d => d.date.toISOString().split("T")[0]),
+        datasets: [
+          { label: "Sales", data: data.map(d => d.sales), borderColor: "blue", fill: false },
+          { label: "Expenses", data: data.map(d => d.expense), borderColor: "red", fill: false },
+          { label: "Profit", data: data.map(d => d.sales - d.expense), borderColor: "green", fill: false }
+        ]
+      }
+    });
+  }
+
+  function renderSummary(current, prev, lastYear) {
+    document.getElementById("summary").innerHTML = `
+        <table>
+          <tr>
+            <th>Period</th><th>Sales</th><th>Expenses</th><th>Profit</th><th>Profit Margin</th>
+          </tr>
+          <tr>
+            <td>Current Month</td><td>${current.sales}</td><td>${current.expense}</td><td>${current.profit}</td><td>${current.margin}</td>
+          </tr>
+          <tr>
+            <td>Previous Month</td><td>${prev.sales}</td><td>${prev.expense}</td><td>${prev.profit}</td><td>${prev.margin}</td>
+          </tr>
+          <tr>
+            <td>Same Month Last Year</td><td>${lastYear.sales}</td><td>${lastYear.expense}</td><td>${lastYear.profit}</td><td>${lastYear.margin}</td>
+          </tr>
+        </table>
+      `;
+  }
+
+  function renderMonthlyView(data) {
+    // Group by year-month
+    const monthly = {};
+    data.forEach(d => {
+      const ym = d.date.getFullYear() + "-" + String(d.date.getMonth()+1).padStart(2, "0");
+      if (!monthly[ym]) monthly[ym] = { sales:0, expense:0 };
+      monthly[ym].sales += d.sales;
+      monthly[ym].expense += d.expense;
+    });
+
+    const labels = Object.keys(monthly).sort();
+    const sales = labels.map(m => monthly[m].sales);
+    const expenses = labels.map(m => monthly[m].expense);
+    const profits = labels.map((m,i) => sales[i] - expenses[i]);
+
+    // Chart
+    const ctx = document.getElementById("monthlyChart").getContext("2d");
+    new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [
+          { label: "Sales", data: sales, backgroundColor: "rgba(0,0,255,0.5)" },
+          { label: "Expenses", data: expenses, backgroundColor: "rgba(255,0,0,0.5)" },
+          { label: "Profit", type: "line", data: profits, borderColor: "green", fill: false }
+        ]
+      }
+    });
+
+    // Table
+    let html = `<table><tr><th>Month</th><th>Sales</th><th>Expenses</th><th>Profit</th><th>Margin</th></tr>`;
+    labels.forEach((m,i) => {
+      const profit = profits[i];
+      const margin = sales[i] ? ((profit/sales[i])*100).toFixed(1)+"%" : "-";
+      html += `<tr>
+          <td>${m}</td>
+          <td>${sales[i]}</td>
+          <td>${expenses[i]}</td>
+          <td>${profit}</td>
+          <td>${margin}</td>
+        </tr>`;
+    });
+    html += "</table>";
+    document.getElementById("monthlyTable").innerHTML = html;
+  }
+
+  loadData(); // auto-load default
+</script>
+</body>
+</html>
