@@ -1,171 +1,684 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Sales Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        #url-input { margin-bottom: 20px; }
-        canvas { max-width: 900px; margin-bottom: 40px; }
-        table { border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: right; }
-        th { background: #f9f9f9; text-align: center; }
-        h2 { margin-top: 40px; }
-    </style>
-</head>
-<body>
-<h1>📊 Sales Dashboard</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MS Nursery Farooqabad — Sales Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  </head>
+  <body class="bg-slate-50 text-slate-900">
+    <div class="mx-auto max-w-6xl px-4 py-8">
+      <header class="text-center">
+        <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">MS Nursery Farooqabad</h1>
+        <p class="mt-2 text-sm text-slate-600 sm:text-base">Sales & Expense Dashboard</p>
+      </header>
 
-<div id="url-input">
-    <label>Google Sheet CSV URL: </label>
-    <input type="text" id="csvUrl" size="100" placeholder="Enter published CSV URL here">
-    <button onclick="loadData()">Load Data</button>
-</div>
+      <section class="mt-8 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div class="w-full">
+            <label for="csvUrl" class="block text-sm font-medium text-slate-700">Sales CSV URL</label>
+            <input
+              id="csvUrl"
+              type="url"
+              class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none ring-0 placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+              spellcheck="false"
+              autocomplete="off"
+              inputmode="url"
+            />
+          </div>
+          <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+            <button
+              id="loadBtn"
+              type="button"
+              class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:cursor-not-allowed disabled:bg-slate-400"
+            >
+              Load Data
+            </button>
+            <div id="status" class="text-sm text-slate-600"></div>
+          </div>
+        </div>
+        <div id="errorBox" class="mt-4 hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"></div>
+      </section>
 
-<h2>Daily Data</h2>
-<canvas id="salesChart"></canvas>
+      <section class="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="text-sm font-medium text-slate-600">Total Sales (So Far)</div>
+          <div id="totalSales" class="mt-2 text-2xl font-semibold tabular-nums text-slate-900">—</div>
+        </div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="text-sm font-medium text-slate-600">Total Expenses (So Far)</div>
+          <div id="totalExpenses" class="mt-2 text-2xl font-semibold tabular-nums text-slate-900">—</div>
+        </div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="text-sm font-medium text-slate-600">Total Profit (So Far)</div>
+          <div id="totalProfit" class="mt-2 text-2xl font-semibold tabular-nums">—</div>
+        </div>
+      </section>
 
-<h2>Summary</h2>
-<div id="summary"></div>
+      <section class="mt-10 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 class="text-lg font-semibold tracking-tight">Current Month</h2>
+            <p id="currentMonthLabel" class="mt-1 text-sm text-slate-600">—</p>
+          </div>
+        </div>
 
-<h2>Month-on-Month Trends</h2>
-<canvas id="monthlyChart"></canvas>
-<div id="monthlyTable"></div>
+        <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-4">
+          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div class="text-sm font-medium text-slate-600">Sales</div>
+            <div id="curMonthSales" class="mt-2 text-xl font-semibold tabular-nums">—</div>
+          </div>
+          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div class="text-sm font-medium text-slate-600">Expenses</div>
+            <div id="curMonthExpenses" class="mt-2 text-xl font-semibold tabular-nums">—</div>
+          </div>
+          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div class="text-sm font-medium text-slate-600">Profit</div>
+            <div id="curMonthProfit" class="mt-2 text-xl font-semibold tabular-nums">—</div>
+          </div>
+          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div class="text-sm font-medium text-slate-600">Projected Sales (This Month)</div>
+            <div id="curMonthProjectedSales" class="mt-2 text-xl font-semibold tabular-nums">—</div>
+            <div id="curMonthProjectedMeta" class="mt-1 text-xs text-slate-600">—</div>
+          </div>
+        </div>
 
-<script>
-  const defaultUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR3hyyYsE3dJcn54tB7p8WmfnTmit3mxvbSlA9O-u2DU3fsfPa0u6olmgSnOkeGOGAZUhrcNGtSlCT3/pub?gid=0&single=true&output=csv";
+        <div class="mt-6">
+          <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <h3 class="text-sm font-semibold text-slate-900">Daily Comparison (Current vs Last Month)</h3>
+            <p class="text-xs text-slate-600">Missing dates are treated as 0</p>
+          </div>
+          <div class="mt-3 h-[320px] w-full">
+            <canvas id="dailyComparisonChart"></canvas>
+          </div>
+        </div>
+      </section>
 
-  async function loadData() {
-    const url = document.getElementById("csvUrl").value || defaultUrl;
-    const response = await fetch(url);
-    const csvText = await response.text();
+      <section class="mt-10 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 class="text-lg font-semibold tracking-tight">Month-on-Month</h2>
+            <p class="mt-1 text-sm text-slate-600">Grouped from CSV (YYYY-MM)</p>
+          </div>
+        </div>
 
-    Papa.parse(csvText, {
-      header: true,
-      dynamicTyping: true,
-      complete: (results) => {
-        const rows = results.data.filter(r => r.Date && r.Sales);
-        processData(rows);
+        <div class="mt-4 h-[320px] w-full">
+          <canvas id="monthSalesChart"></canvas>
+        </div>
+
+        <div class="mt-6">
+          <div class="overflow-x-auto rounded-2xl border border-slate-200">
+            <table class="min-w-full divide-y divide-slate-200 bg-white text-sm">
+              <thead class="bg-slate-50">
+                <tr>
+                  <th class="px-4 py-3 text-left font-semibold text-slate-700">Month</th>
+                  <th class="px-4 py-3 text-right font-semibold text-slate-700">Total Sales</th>
+                  <th class="px-4 py-3 text-right font-semibold text-slate-700">Total Expenses</th>
+                  <th class="px-4 py-3 text-right font-semibold text-slate-700">Total Profit</th>
+                </tr>
+              </thead>
+              <tbody id="monthlyTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+          <p class="mt-2 text-xs text-slate-600">Tip: click a row to open daily details.</p>
+        </div>
+      </section>
+    </div>
+
+    <div id="modalRoot" class="fixed inset-0 z-50 hidden">
+      <div id="modalOverlay" class="absolute inset-0 bg-slate-900/50"></div>
+      <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="w-full max-w-3xl rounded-2xl bg-white shadow-xl">
+          <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+            <div>
+              <div id="modalTitle" class="text-base font-semibold text-slate-900">Sales Details</div>
+              <div id="modalSubtitle" class="mt-1 text-xs text-slate-600">—</div>
+            </div>
+            <button id="modalClose" type="button" class="rounded-lg px-2 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-200">
+              Close
+            </button>
+          </div>
+          <div class="max-h-[70vh] overflow-y-auto p-5">
+            <div class="overflow-x-auto rounded-2xl border border-slate-200">
+              <table class="min-w-full divide-y divide-slate-200 bg-white text-sm">
+                <thead class="bg-slate-50">
+                  <tr>
+                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Date</th>
+                    <th class="px-4 py-3 text-right font-semibold text-slate-700">Sales</th>
+                    <th class="px-4 py-3 text-right font-semibold text-slate-700">Expense</th>
+                    <th class="px-4 py-3 text-right font-semibold text-slate-700">Profit</th>
+                  </tr>
+                </thead>
+                <tbody id="modalTableBody" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const DEFAULT_CSV_URL =
+        "https://docs.google.com/spreadsheets/d/e/2PACX-1vR3hyyYsE3dJcn54tB7p8WmfnTmit3mxvbSlA9O-u2DU3fsfPa0u6olmgSnOkeGOGAZUhrcNGtSlCT3/pub?gid=0&single=true&output=csv";
+
+      const ui = {
+        csvUrl: document.getElementById("csvUrl"),
+        loadBtn: document.getElementById("loadBtn"),
+        status: document.getElementById("status"),
+        errorBox: document.getElementById("errorBox"),
+        totalSales: document.getElementById("totalSales"),
+        totalExpenses: document.getElementById("totalExpenses"),
+        totalProfit: document.getElementById("totalProfit"),
+        currentMonthLabel: document.getElementById("currentMonthLabel"),
+        curMonthSales: document.getElementById("curMonthSales"),
+        curMonthExpenses: document.getElementById("curMonthExpenses"),
+        curMonthProfit: document.getElementById("curMonthProfit"),
+        curMonthProjectedSales: document.getElementById("curMonthProjectedSales"),
+        curMonthProjectedMeta: document.getElementById("curMonthProjectedMeta"),
+        monthlyTableBody: document.getElementById("monthlyTableBody"),
+        modalRoot: document.getElementById("modalRoot"),
+        modalOverlay: document.getElementById("modalOverlay"),
+        modalClose: document.getElementById("modalClose"),
+        modalTitle: document.getElementById("modalTitle"),
+        modalSubtitle: document.getElementById("modalSubtitle"),
+        modalTableBody: document.getElementById("modalTableBody"),
+      };
+
+      const fmt = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+      const fmtSigned = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0, signDisplay: "exceptZero" });
+
+      let charts = { daily: null, month: null };
+      let cache = { entries: [], byMonth: new Map() };
+
+      function setError(msg) {
+        if (!msg) {
+          ui.errorBox.classList.add("hidden");
+          ui.errorBox.textContent = "";
+          return;
+        }
+        ui.errorBox.textContent = msg;
+        ui.errorBox.classList.remove("hidden");
       }
-    });
-  }
 
-  function processData(rows) {
-    const salesData = rows.map(r => ({
-      date: new Date(r.Date),
-      sales: +r.Sales || 0,
-      expense: +r.Expense || 0
-    }));
-
-    // Current month = latest month in dataset
-    const latest = salesData.reduce((max, d) => d.date > max ? d.date : max, new Date(0));
-    const curMonth = latest.getMonth();
-    const curYear = latest.getFullYear();
-
-    const currentMonth = salesData.filter(d => d.date.getMonth() === curMonth && d.date.getFullYear() === curYear);
-    const prevMonth = salesData.filter(d => d.date.getMonth() === curMonth-1 && d.date.getFullYear() === curYear);
-    const lastYear = salesData.filter(d => d.date.getMonth() === curMonth && d.date.getFullYear() === curYear-1);
-
-    function totals(arr) {
-      const sales = arr.reduce((sum, d) => sum + d.sales, 0);
-      const expense = arr.reduce((sum, d) => sum + d.expense, 0);
-      const profit = sales - expense;
-      const margin = sales ? ((profit / sales) * 100).toFixed(1) + "%" : "-";
-      return { sales, expense, profit, margin };
-    }
-
-    const currentTotals = totals(currentMonth);
-    const prevTotals = totals(prevMonth);
-    const lastYearTotals = totals(lastYear);
-
-    renderDailyChart(currentMonth);
-    renderSummary(currentTotals, prevTotals, lastYearTotals);
-    renderMonthlyView(salesData);
-  }
-
-  function renderDailyChart(data) {
-    const ctx = document.getElementById("salesChart").getContext("2d");
-    new Chart(ctx, {
-      type: "line",
-      data: {
-        labels: data.map(d => d.date.toISOString().split("T")[0]),
-        datasets: [
-          { label: "Sales", data: data.map(d => d.sales), borderColor: "blue", fill: false },
-          { label: "Expenses", data: data.map(d => d.expense), borderColor: "red", fill: false },
-          { label: "Profit", data: data.map(d => d.sales - d.expense), borderColor: "green", fill: false }
-        ]
+      function setStatus(msg) {
+        ui.status.textContent = msg || "";
       }
-    });
-  }
 
-  function renderSummary(current, prev, lastYear) {
-    document.getElementById("summary").innerHTML = `
-        <table>
-          <tr>
-            <th>Period</th><th>Sales</th><th>Expenses</th><th>Profit</th><th>Profit Margin</th>
-          </tr>
-          <tr>
-            <td>Current Month</td><td>${current.sales}</td><td>${current.expense}</td><td>${current.profit}</td><td>${current.margin}</td>
-          </tr>
-          <tr>
-            <td>Previous Month</td><td>${prev.sales}</td><td>${prev.expense}</td><td>${prev.profit}</td><td>${prev.margin}</td>
-          </tr>
-          <tr>
-            <td>Same Month Last Year</td><td>${lastYear.sales}</td><td>${lastYear.expense}</td><td>${lastYear.profit}</td><td>${lastYear.margin}</td>
-          </tr>
-        </table>
-      `;
-  }
-
-  function renderMonthlyView(data) {
-    // Group by year-month
-    const monthly = {};
-    data.forEach(d => {
-      const ym = d.date.getFullYear() + "-" + String(d.date.getMonth()+1).padStart(2, "0");
-      if (!monthly[ym]) monthly[ym] = { sales:0, expense:0 };
-      monthly[ym].sales += d.sales;
-      monthly[ym].expense += d.expense;
-    });
-
-    const labels = Object.keys(monthly).sort();
-    const sales = labels.map(m => monthly[m].sales);
-    const expenses = labels.map(m => monthly[m].expense);
-    const profits = labels.map((m,i) => sales[i] - expenses[i]);
-
-    // Chart
-    const ctx = document.getElementById("monthlyChart").getContext("2d");
-    new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: labels,
-        datasets: [
-          { label: "Sales", data: sales, backgroundColor: "rgba(0,0,255,0.5)" },
-          { label: "Expenses", data: expenses, backgroundColor: "rgba(255,0,0,0.5)" },
-          { label: "Profit", type: "line", data: profits, borderColor: "green", fill: false }
-        ]
+      function setLoading(isLoading) {
+        ui.loadBtn.disabled = isLoading;
+        ui.loadBtn.textContent = isLoading ? "Loading…" : "Load Data";
       }
-    });
 
-    // Table
-    let html = `<table><tr><th>Month</th><th>Sales</th><th>Expenses</th><th>Profit</th><th>Margin</th></tr>`;
-    labels.forEach((m,i) => {
-      const profit = profits[i];
-      const margin = sales[i] ? ((profit/sales[i])*100).toFixed(1)+"%" : "-";
-      html += `<tr>
-          <td>${m}</td>
-          <td>${sales[i]}</td>
-          <td>${expenses[i]}</td>
-          <td>${profit}</td>
-          <td>${margin}</td>
-        </tr>`;
-    });
-    html += "</table>";
-    document.getElementById("monthlyTable").innerHTML = html;
-  }
+      function parseCsvText(text) {
+        const s = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+        if (!s) return [];
+        const rows = [];
+        let row = [];
+        let field = "";
+        let inQuotes = false;
+        for (let i = 0; i < s.length; i++) {
+          const c = s[i];
+          if (inQuotes) {
+            if (c === '"') {
+              if (s[i + 1] === '"') {
+                field += '"';
+                i++;
+              } else {
+                inQuotes = false;
+              }
+            } else {
+              field += c;
+            }
+          } else {
+            if (c === '"') {
+              inQuotes = true;
+            } else if (c === ",") {
+              row.push(field);
+              field = "";
+            } else if (c === "\n") {
+              row.push(field);
+              rows.push(row);
+              row = [];
+              field = "";
+            } else {
+              field += c;
+            }
+          }
+        }
+        row.push(field);
+        rows.push(row);
+        return rows;
+      }
 
-  loadData(); // auto-load default
-</script>
-</body>
+      function toNumber(v) {
+        if (v === null || v === undefined) return 0;
+        const t = String(v).trim();
+        if (!t) return 0;
+        const n = Number(t.replace(/,/g, ""));
+        return Number.isFinite(n) ? n : 0;
+      }
+
+      function parseDateYmd(ymd) {
+        const t = String(ymd || "").trim();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) return null;
+        const [y, m, d] = t.split("-").map((x) => Number(x));
+        const dt = new Date(Date.UTC(y, m - 1, d));
+        if (Number.isNaN(dt.getTime())) return null;
+        return dt;
+      }
+
+      function monthKeyFromDateUTC(date) {
+        const y = date.getUTCFullYear();
+        const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+        return `${y}-${m}`;
+      }
+
+      function dayOfMonthUTC(date) {
+        return date.getUTCDate();
+      }
+
+      function daysInMonthUTC(year, monthIndex0) {
+        return new Date(Date.UTC(year, monthIndex0 + 1, 0)).getUTCDate();
+      }
+
+      function monthKeyFromLocalNow() {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, "0");
+        return `${y}-${m}`;
+      }
+
+      function prevMonthKeyFromMonthKey(mk) {
+        const [yStr, mStr] = mk.split("-");
+        let y = Number(yStr);
+        let m = Number(mStr);
+        m -= 1;
+        if (m === 0) {
+          m = 12;
+          y -= 1;
+        }
+        return `${y}-${String(m).padStart(2, "0")}`;
+      }
+
+      function monthKeyAddYears(mk, deltaYears) {
+        const [yStr, mStr] = mk.split("-");
+        const y = Number(yStr) + deltaYears;
+        return `${y}-${mStr}`;
+      }
+
+      function normalizeEntries(csvText) {
+        const grid = parseCsvText(csvText);
+        if (!grid.length) return [];
+        const header = grid[0].map((h) => String(h || "").trim().toLowerCase());
+        const idxDate = header.indexOf("date");
+        const idxSales = header.indexOf("sales");
+        const idxExpense = header.indexOf("expense");
+        if (idxDate < 0 || idxSales < 0 || idxExpense < 0) {
+          throw new Error("CSV must have columns: Date, Sales, Expense");
+        }
+        const out = [];
+        for (let i = 1; i < grid.length; i++) {
+          const r = grid[i];
+          if (!r || r.length === 0) continue;
+          const dateStr = (r[idxDate] ?? "").toString().trim();
+          if (!dateStr) continue;
+          const dt = parseDateYmd(dateStr);
+          if (!dt) continue;
+          const sales = toNumber(r[idxSales]);
+          const expense = toNumber(r[idxExpense]);
+          out.push({
+            dateStr,
+            dateUTC: dt,
+            monthKey: monthKeyFromDateUTC(dt),
+            day: dayOfMonthUTC(dt),
+            sales,
+            expense,
+            profit: sales - expense,
+          });
+        }
+        out.sort((a, b) => a.dateUTC.getTime() - b.dateUTC.getTime());
+        return out;
+      }
+
+      function buildByMonth(entries) {
+        const byMonth = new Map();
+        for (const e of entries) {
+          if (!byMonth.has(e.monthKey)) {
+            byMonth.set(e.monthKey, { monthKey: e.monthKey, sales: 0, expense: 0, profit: 0, byDay: new Map() });
+          }
+          const m = byMonth.get(e.monthKey);
+          m.sales += e.sales;
+          m.expense += e.expense;
+          m.profit += e.profit;
+          if (!m.byDay.has(e.dateStr)) {
+            m.byDay.set(e.dateStr, { dateStr: e.dateStr, sales: 0, expense: 0, profit: 0 });
+          }
+          const d = m.byDay.get(e.dateStr);
+          d.sales += e.sales;
+          d.expense += e.expense;
+          d.profit += e.profit;
+        }
+        return byMonth;
+      }
+
+      function sumAll(entries) {
+        let sales = 0;
+        let expense = 0;
+        for (const e of entries) {
+          sales += e.sales;
+          expense += e.expense;
+        }
+        return { sales, expense, profit: sales - expense };
+      }
+
+      function setProfitEl(el, profit) {
+        el.textContent = fmtSigned.format(profit);
+        el.classList.remove("text-emerald-700", "text-red-700", "text-slate-900");
+        if (profit > 0) el.classList.add("text-emerald-700");
+        else if (profit < 0) el.classList.add("text-red-700");
+        else el.classList.add("text-slate-900");
+      }
+
+      function renderSummary(entries) {
+        const totals = sumAll(entries);
+        ui.totalSales.textContent = fmt.format(totals.sales);
+        ui.totalExpenses.textContent = fmt.format(totals.expense);
+        setProfitEl(ui.totalProfit, totals.profit);
+      }
+
+      function buildMonthDaySeries(entries, monthKey, yearUTC, monthIndex0UTC) {
+        const days = daysInMonthUTC(yearUTC, monthIndex0UTC);
+        const sales = Array.from({ length: days }, () => 0);
+        const expense = Array.from({ length: days }, () => 0);
+        for (const e of entries) {
+          if (e.monthKey !== monthKey) continue;
+          const idx = e.day - 1;
+          if (idx >= 0 && idx < days) {
+            sales[idx] += e.sales;
+            expense[idx] += e.expense;
+          }
+        }
+        return { days, sales, expense };
+      }
+
+      function renderCurrentMonth(entries) {
+        const currentMonthKey = monthKeyFromLocalNow();
+        const lastMonthKey = prevMonthKeyFromMonthKey(currentMonthKey);
+        const lastMonthLastYearKey = monthKeyAddYears(lastMonthKey, -1);
+        const sameMonthLastYearKey = monthKeyAddYears(currentMonthKey, -1);
+        ui.currentMonthLabel.textContent = `Current month detected from your device: ${currentMonthKey} (vs ${lastMonthKey})`;
+
+        const curTotals = cache.byMonth.get(currentMonthKey) || { sales: 0, expense: 0, profit: 0 };
+        ui.curMonthSales.textContent = fmt.format(curTotals.sales || 0);
+        ui.curMonthExpenses.textContent = fmt.format(curTotals.expense || 0);
+        setProfitEl(ui.curMonthProfit, curTotals.profit || 0);
+
+        const now = new Date();
+        const todayDay = now.getDate();
+        const [curY, curM] = currentMonthKey.split("-").map((x) => Number(x));
+        const [lastY, lastM] = lastMonthKey.split("-").map((x) => Number(x));
+        const [lmlyY, lmlyM] = lastMonthLastYearKey.split("-").map((x) => Number(x));
+        const [smlyY, smlyM] = sameMonthLastYearKey.split("-").map((x) => Number(x));
+
+        const curDaysInMonth = daysInMonthUTC(curY, curM - 1);
+        const curEntries = entries.filter((e) => e.monthKey === currentMonthKey);
+        const curMaxDayInData = curEntries.reduce((m, e) => (e.day <= todayDay && e.day > m ? e.day : m), 0);
+        const cutoffDay = Math.max(1, Math.min(curDaysInMonth, curMaxDayInData || Math.min(todayDay, curDaysInMonth)));
+        const curMTDSales = curEntries.reduce((sum, e) => (e.day <= cutoffDay ? sum + e.sales : sum), 0);
+
+        const lastDaysInMonth = daysInMonthUTC(lastY, lastM - 1);
+        const lastMonthEntries = entries.filter((e) => e.monthKey === lastMonthKey);
+        const lastMTD = lastMonthEntries.reduce((sum, e) => (e.day <= Math.min(cutoffDay, lastDaysInMonth) ? sum + e.sales : sum), 0);
+        const lastTotal = (cache.byMonth.get(lastMonthKey) || { sales: 0 }).sales || 0;
+
+        const lmlyDaysInMonth = daysInMonthUTC(lmlyY, lmlyM - 1);
+        const lmlyEntries = entries.filter((e) => e.monthKey === lastMonthLastYearKey);
+        const lmlyMTD = lmlyEntries.reduce((sum, e) => (e.day <= Math.min(cutoffDay, lmlyDaysInMonth) ? sum + e.sales : sum), 0);
+        const lmlyTotal = (cache.byMonth.get(lastMonthLastYearKey) || { sales: 0 }).sales || 0;
+
+        const smlyDaysInMonth = daysInMonthUTC(smlyY, smlyM - 1);
+        const smlyEntries = entries.filter((e) => e.monthKey === sameMonthLastYearKey);
+        const smlyMTD = smlyEntries.reduce((sum, e) => (e.day <= Math.min(cutoffDay, smlyDaysInMonth) ? sum + e.sales : sum), 0);
+        const smlyTotal = (cache.byMonth.get(sameMonthLastYearKey) || { sales: 0 }).sales || 0;
+
+        const runRateProj = (curMTDSales / cutoffDay) * curDaysInMonth;
+        const prevMonthProj = lastMTD > 0 && lastTotal > 0 ? lastTotal * (curMTDSales / lastMTD) : null;
+        const prevMonthLastYearProj = lmlyMTD > 0 && lmlyTotal > 0 ? lmlyTotal * (curMTDSales / lmlyMTD) : null;
+        const sameMonthLastYearProj = smlyMTD > 0 && smlyTotal > 0 ? smlyTotal * (curMTDSales / smlyMTD) : null;
+
+        const yoyGrowth = lmlyTotal > 0 ? lastTotal / lmlyTotal : 1;
+        const seasonalBaseline = smlyTotal > 0 ? smlyTotal * yoyGrowth : null;
+
+        const candidates = [];
+        const progress = cutoffDay / curDaysInMonth;
+        const wRunRate = 0.15 + 0.35 * progress;
+        const wSameMonthLastYear = 0.4 - 0.2 * progress;
+        const wPrevMonth = 0.25;
+        const wPrevMonthLastYear = 0.1;
+
+        if (curMTDSales > 0) {
+          candidates.push({ label: "run-rate", value: runRateProj, weight: wRunRate });
+          if (prevMonthProj !== null) candidates.push({ label: "prev-month", value: prevMonthProj, weight: wPrevMonth });
+          if (prevMonthLastYearProj !== null) candidates.push({ label: "prev-month last year", value: prevMonthLastYearProj, weight: wPrevMonthLastYear });
+          if (sameMonthLastYearProj !== null) candidates.push({ label: "same month last year", value: sameMonthLastYearProj, weight: wSameMonthLastYear });
+        } else {
+          if (seasonalBaseline !== null) candidates.push({ label: "seasonal baseline", value: seasonalBaseline, weight: 0.6 });
+          if (lastTotal > 0) candidates.push({ label: "prev-month total", value: lastTotal, weight: 0.4 });
+          if (!candidates.length) candidates.push({ label: "run-rate", value: 0, weight: 1 });
+        }
+
+        const weightSum = candidates.reduce((s, c) => s + c.weight, 0) || 1;
+        const projected = candidates.reduce((s, c) => s + c.value * (c.weight / weightSum), 0);
+        ui.curMonthProjectedSales.textContent = fmt.format(Math.round(projected));
+        ui.curMonthProjectedMeta.textContent = `MTD through day ${cutoffDay} · based on ${candidates.map((c) => c.label).join(", ")}`;
+
+        const cur = buildMonthDaySeries(entries, currentMonthKey, curY, curM - 1);
+        const prev = buildMonthDaySeries(entries, lastMonthKey, lastY, lastM - 1);
+        const maxDays = Math.max(cur.days, prev.days);
+        const labels = Array.from({ length: maxDays }, (_, i) => String(i + 1));
+        const curSales = cur.sales.concat(Array.from({ length: maxDays - cur.sales.length }, () => 0));
+        const curExp = cur.expense.concat(Array.from({ length: maxDays - cur.expense.length }, () => 0));
+        const prevSales = prev.sales.concat(Array.from({ length: maxDays - prev.sales.length }, () => 0));
+        const prevExp = prev.expense.concat(Array.from({ length: maxDays - prev.expense.length }, () => 0));
+
+        const ctx = document.getElementById("dailyComparisonChart");
+        if (charts.daily) charts.daily.destroy();
+        charts.daily = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: `Sales (${currentMonthKey})`,
+                data: curSales,
+                borderColor: "#0f172a",
+                backgroundColor: "rgba(15,23,42,0.12)",
+                tension: 0.25,
+              },
+              {
+                label: `Expense (${currentMonthKey})`,
+                data: curExp,
+                borderColor: "#ef4444",
+                backgroundColor: "rgba(239,68,68,0.12)",
+                tension: 0.25,
+              },
+              {
+                label: `Sales (${lastMonthKey})`,
+                data: prevSales,
+                borderColor: "#64748b",
+                backgroundColor: "rgba(100,116,139,0.12)",
+                borderDash: [6, 6],
+                tension: 0.25,
+              },
+              {
+                label: `Expense (${lastMonthKey})`,
+                data: prevExp,
+                borderColor: "#fb7185",
+                backgroundColor: "rgba(251,113,133,0.12)",
+                borderDash: [6, 6],
+                tension: 0.25,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+              legend: { position: "bottom", labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true } },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `${ctx.dataset.label}: ${fmt.format(ctx.parsed.y || 0)}`,
+                },
+              },
+            },
+            scales: {
+              x: { grid: { display: false }, ticks: { maxTicksLimit: 16 } },
+              y: { ticks: { callback: (v) => fmt.format(v) } },
+            },
+          },
+        });
+      }
+
+      function renderMonthOnMonth() {
+        const monthsAsc = Array.from(cache.byMonth.keys()).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+        const sales = monthsAsc.map((k) => cache.byMonth.get(k).sales);
+
+        const ctx = document.getElementById("monthSalesChart");
+        if (charts.month) charts.month.destroy();
+        charts.month = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: monthsAsc,
+            datasets: [
+              {
+                label: "Total Sales",
+                data: sales,
+                backgroundColor: "rgba(15,23,42,0.18)",
+                borderColor: "#0f172a",
+                borderWidth: 1,
+                borderRadius: 8,
+                maxBarThickness: 42,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `Sales: ${fmt.format(ctx.parsed.y || 0)}`,
+                },
+              },
+            },
+            scales: {
+              x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+              y: { ticks: { callback: (v) => fmt.format(v) } },
+            },
+          },
+        });
+
+        const monthsDesc = monthsAsc.slice().reverse();
+        ui.monthlyTableBody.innerHTML = "";
+        for (const mk of monthsDesc) {
+          const m = cache.byMonth.get(mk);
+          const tr = document.createElement("tr");
+          tr.className = "cursor-pointer hover:bg-slate-50";
+          tr.dataset.monthKey = mk;
+          const profitClass = m.profit > 0 ? "text-emerald-700" : m.profit < 0 ? "text-red-700" : "text-slate-900";
+          tr.innerHTML = `
+            <td class="px-4 py-3 text-left font-medium text-slate-900">${mk}</td>
+            <td class="px-4 py-3 text-right tabular-nums text-slate-900">${fmt.format(m.sales)}</td>
+            <td class="px-4 py-3 text-right tabular-nums text-slate-900">${fmt.format(m.expense)}</td>
+            <td class="px-4 py-3 text-right tabular-nums ${profitClass}">${fmtSigned.format(m.profit)}</td>
+          `;
+          ui.monthlyTableBody.appendChild(tr);
+        }
+      }
+
+      function openModalForMonth(monthKey) {
+        const m = cache.byMonth.get(monthKey);
+        if (!m) return;
+        ui.modalTitle.textContent = `Sales Details – ${monthKey}`;
+        ui.modalSubtitle.textContent = `Sales: ${fmt.format(m.sales)} · Expense: ${fmt.format(m.expense)} · Profit: ${fmtSigned.format(m.profit)}`;
+        ui.modalTableBody.innerHTML = "";
+        const days = Array.from(m.byDay.values()).sort((a, b) => (a.dateStr < b.dateStr ? -1 : a.dateStr > b.dateStr ? 1 : 0));
+        for (const d of days) {
+          const tr = document.createElement("tr");
+          const profitClass = d.profit > 0 ? "text-emerald-700" : d.profit < 0 ? "text-red-700" : "text-slate-900";
+          tr.innerHTML = `
+            <td class="px-4 py-3 text-left font-medium text-slate-900">${d.dateStr}</td>
+            <td class="px-4 py-3 text-right tabular-nums text-slate-900">${fmt.format(d.sales)}</td>
+            <td class="px-4 py-3 text-right tabular-nums text-slate-900">${fmt.format(d.expense)}</td>
+            <td class="px-4 py-3 text-right tabular-nums ${profitClass}">${fmtSigned.format(d.profit)}</td>
+          `;
+          ui.modalTableBody.appendChild(tr);
+        }
+        ui.modalRoot.classList.remove("hidden");
+      }
+
+      function closeModal() {
+        ui.modalRoot.classList.add("hidden");
+      }
+
+      async function loadAndRender(url) {
+        setError("");
+        setStatus("");
+        setLoading(true);
+        try {
+          const res = await fetch(url, { cache: "no-store" });
+          if (!res.ok) throw new Error(`Failed to fetch CSV (${res.status})`);
+          const text = await res.text();
+          const entries = normalizeEntries(text);
+          cache.entries = entries;
+          cache.byMonth = buildByMonth(entries);
+          if (!entries.length) {
+            renderSummary([]);
+            renderCurrentMonth([]);
+            renderMonthOnMonth();
+            setStatus("No rows found in CSV");
+            return;
+          }
+          renderSummary(entries);
+          renderCurrentMonth(entries);
+          renderMonthOnMonth();
+          const min = entries[0].dateStr;
+          const max = entries[entries.length - 1].dateStr;
+          setStatus(`Loaded ${entries.length} rows (${min} → ${max})`);
+        } catch (e) {
+          setError(e && e.message ? e.message : "Failed to load data");
+          setStatus("");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      ui.loadBtn.addEventListener("click", () => {
+        const url = (ui.csvUrl.value || "").trim() || DEFAULT_CSV_URL;
+        localStorage.setItem("msNurseryCsvUrl", url);
+        loadAndRender(url);
+      });
+
+      ui.monthlyTableBody.addEventListener("click", (e) => {
+        const tr = e.target.closest("tr");
+        if (!tr) return;
+        const mk = tr.dataset.monthKey;
+        if (!mk) return;
+        openModalForMonth(mk);
+      });
+
+      ui.modalClose.addEventListener("click", closeModal);
+      ui.modalOverlay.addEventListener("click", closeModal);
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeModal();
+      });
+
+      const savedUrl = (localStorage.getItem("msNurseryCsvUrl") || "").trim();
+      ui.csvUrl.value = savedUrl || DEFAULT_CSV_URL;
+      loadAndRender(ui.csvUrl.value);
+    </script>
+  </body>
 </html>
