@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pakistan Plant Directory</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <header class="header">
+    <h1>Pakistan Plant Directory</h1>
+    <p class="tagline">Landscaping &amp; nursery plants for Pakistan climate</p>
+    <nav>
+      <a href="../index.html" class="nav-link">Sale Report</a>
+      <a href="plants.html" class="nav-link" id="nav-directory">Directory</a>
+      <a href="plants.html#favourites" class="nav-link" id="nav-favourites">Favourites (<span id="fav-count">0</span>)</a>
+    </nav>
+  </header>
+
+  <main class="main">
+    <div id="directory-view">
+    <section class="controls">
+      <div class="control-group">
+        <label for="search">Search (English or Urdu)</label>
+        <input type="text" id="search" placeholder="Search plants..." autocomplete="off">
+      </div>
+      <div class="control-group">
+        <label for="category">Category</label>
+        <select id="category">
+          <option value="">All categories</option>
+        </select>
+      </div>
+      <div class="control-group view-toggle">
+        <button type="button" id="view-grid" class="view-btn active" aria-label="Grid view">⊞</button>
+        <button type="button" id="view-list" class="view-btn" aria-label="List view">≡</button>
+      </div>
+    </section>
+
+    <div id="loading" class="loading" aria-live="polite">
+      <div class="spinner"></div>
+      <p>Loading plant directory...</p>
+    </div>
+
+    <div id="error" class="error" role="alert" hidden>
+      <p>Failed to load plant data. Please refresh the page.</p>
+    </div>
+
+    <section id="directory" class="directory" hidden>
+      <h2>Plant Directory</h2>
+      <p class="result-count"><span id="result-count">0</span> plants</p>
+      <div id="plant-grid" class="plant-grid view-grid" role="list"></div>
+    </section>
+
+    <section id="no-results" class="no-results" hidden>
+      <p>No plants match your search. Try different keywords or category.</p>
+    </section>
+    </div>
+
+    <section id="favourites-view" class="favourites-section" hidden>
+      <h2>Your Favourites</h2>
+      <div class="favourites-actions">
+        <button type="button" id="export-pdf" class="btn btn-primary">Export Favourites as PDF</button>
+      </div>
+      <div id="favourites-list" class="favourites-list"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Pakistan Landscaping &amp; Nursery Plant Directory — Static site, no backend required.</p>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    (function() {
+      const init = window.PLANT_DIRECTORY_INIT;
+      if (init) init('plants');
+    })();
+  </script>
+</body>
+</html>

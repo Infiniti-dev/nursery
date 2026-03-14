@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plant Details — Pakistan Plant Directory</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <header class="header">
+    <h1><a href="plants.html">Pakistan Plant Directory</a></h1>
+    <p class="tagline">Plant details</p>
+    <nav>
+      <a href="../index.html" class="nav-link">Sale Report</a>
+      <a href="plants.html" class="nav-link">Directory</a>
+    </nav>
+  </header>
+
+  <main class="main plant-detail-main">
+    <div id="loading-detail" class="loading" aria-live="polite">
+      <div class="spinner"></div>
+      <p>Loading plant information...</p>
+    </div>
+
+    <div id="error-detail" class="error" role="alert" hidden>
+      <p>Could not load information for this plant. Wikipedia may be unavailable.</p>
+      <a href="plants.html" class="btn btn-secondary">Back to Directory</a>
+    </div>
+
+    <article id="plant-detail" class="plant-detail" hidden>
+      <div class="plant-detail-header">
+        <a href="plants.html" class="back-link">← Back to Directory</a>
+        <h2 id="plant-title"></h2>
+        <p id="plant-urdu" class="plant-urdu"></p>
+      </div>
+      <div class="plant-detail-content">
+        <div class="plant-detail-media">
+          <img id="plant-image" class="plant-image" src="" alt="" hidden>
+          <div id="plant-image-placeholder" class="plant-image-placeholder" hidden>
+            <span>No image available</span>
+          </div>
+        </div>
+        <div class="plant-detail-body">
+          <div id="plant-description" class="plant-description"></div>
+          <div id="plant-detail-actions" class="plant-detail-actions" hidden>
+            <button type="button" id="detail-fav-btn" class="btn btn-fav" aria-pressed="false">♡ Favourite</button>
+            <div class="qty-selector qty-selector-detail" id="detail-qty">
+              <button type="button" data-qty="-1" aria-label="Decrease quantity">−</button>
+              <input type="number" min="1" value="1" class="qty-input" aria-label="Quantity">
+              <button type="button" data-qty="1" aria-label="Increase quantity">+</button>
+            </div>
+          </div>
+          <div class="plant-detail-links">
+            <a id="plant-wikipedia" href="" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Read on Wikipedia</a>
+            <a id="plant-youtube" href="" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">Watch on YouTube</a>
+            <a id="plant-google" href="" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">Search on Google</a>
+          </div>
+        </div>
+      </div>
+      <section id="related-plants" class="related-plants" hidden>
+        <h3>Related plants</h3>
+        <p id="related-plants-subtitle" class="related-plants-subtitle"></p>
+        <ul id="related-plants-list" class="related-plants-list"></ul>
+      </section>
+    </article>
+
+    <div id="invalid-plant" class="error" hidden>
+      <p>Plant not specified. <a href="plants.html">Browse the directory</a>.</p>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>Pakistan Landscaping &amp; Nursery Plant Directory</p>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    (function() {
+      const init = window.PLANT_DIRECTORY_INIT;
+      if (init) init('plant');
+    })();
+  </script>
+</body>
+</html>
