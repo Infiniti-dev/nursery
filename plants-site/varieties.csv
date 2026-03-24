@@ -1,0 +1,160 @@
+plant_name,variety_name,urdu_name,notes
+Mango,Sindhri,سندھڑی,Early season; rich sweet slightly tangy; May–June
+Mango,Chaunsa,چونسا,Very sweet juicy; Rahim Yar Khan Multan; Jun–Jul
+Mango,Anwar Ratol,انور رٹول,Thin-skinned very sweet; Punjab; May–Aug
+Mango,Langra,لنگڑا,Green when ripe fibreless; mid-Jul–Aug
+Mango,Dussehri,دوسہری,Popular commercial variety
+Mango,Saroli,سارولی,Commercial variety
+Mango,Malda,مالدا,Commercial variety
+Mango,Fajri,فجری,Commercial variety
+Mango,Totapuri,ٹوٹاپوری,Commercial variety
+Mango,Neelum,نیلم,Late season
+Mango,Almas,الماس,Premium variety
+Mango,Gulab Khas,گلاب خاص,Aromatic variety
+Mango,Kala Chaunsa,کالا چونسا,Dark Chaunsa type
+Mango,White Chaunsa,سفید چونسا,Light Chaunsa type
+Citrus,Kinnow,کنو,Premier citrus of Pakistan; Sargodha Bhalwal; Jan–Feb
+Citrus,Musambi,موسمبی,Sweet lime; Punjab
+Citrus,Washington Navel,واشنگٹن نیول,Early orange
+Citrus,Valencia,والینشیا,Late season orange; Apr–May
+Citrus,Jaffa,جافہ,Sweet orange
+Citrus,Red Blood,ریڈ بلڈ,Blood orange type
+Citrus,Ruby Red,روبی ریڈ,Pigmented variety
+Citrus,Rough Lemon,راف لیمن,Rootstock and juice
+Guava,Surahi,صراحی,Bottle-shaped; Punjab
+Guava,Allahabad,الہ آباد,Common variety
+Guava,Lucknow 49,لکھنؤ 49,Improved cultivar; L-49
+Guava,Red Flesh,سرخ گودا,Red pulp variety
+Guava,Seedless,بے بیج,Low-seed type
+Pomegranate,Kandhari,کندھاری,Deep red seeds; Punjab
+Pomegranate,Desi,دیسی,Local variety
+Pomegranate,Bhagwa,بھگوا,Red cultivar
+Pomegranate,Ganesh,گنیش,Large sweet
+Pomegranate,Arakta,ارکتا,Dark red
+Lychee,China,چائنیز,Early variety
+Lychee,Seedless,بے بیج,Low-seed type
+Lychee,Shahi,شاہی,Local selection
+Sapodilla,Kalipatti,کالی پٹی,Table purpose; oval sweet; late Nov; Punjab
+Sapodilla,Cricket Ball,کِرکٹ بال,Large round; gritty pulp; Punjab
+Jamun,Local,مقامی,Common Punjab type; Jun–Jul
+Jamun,Large Fruit,بڑا پھل,Selected large-fruited
+Jamun,Ra Jamun,را جامن,Indian variety grown in Pakistan
+Papaya,Red Lady,ریڈ لیڈی,F1 hybrid; 8–10 months; PRSV tolerant; Punjab
+Papaya,Solo,سولو,Small sweet; 0.5 kg
+Papaya,Honey Dew,ہنی ڈیو,Sweet variety
+Banana,Basrai,بصرائی,Dwarf banana; Punjab
+Banana,William,ولیم,Robusta type
+Banana,Lady Finger,لیڈی فنگر,Small sweet
+Banana,Dwarf Cavendish,بونا کیونڈش,Common commercial
+Chikoo,Kalipatti,کالی پٹی,Same as Sapodilla; table variety
+Chikoo,Cricket Ball,کِرکٹ بال,Large round; Punjab
+Ber,Umran,امران,High yield; Punjab commercial
+Ber,Kaithli,کیتھلی,Popular in Punjab
+Ber,ZG 2,زی جی 2,PAU selection
+Ber,Wallaiti,ولائتی,Drought hardy
+Ber,Sanaur 2,سنور 2,Punjab variety
+Ber,Balvant,بلونت,Early; Punjab
+Ber,Neelam,نیلم,Late season
+Phalsa,Local,مقامی,Wild and cultivated; Punjab
+Phalsa,Sharbati,شربتی,Sweet selection
+Mulberry,Black,کالا شہتوت,Common black fruit
+Mulberry,White,سفید شہتوت,White fruited
+Mulberry,Shahoot,شاہوت,Local name
+Fig,English Fig,انگریزی انجیر,Punjab evaluation
+Fig,Hunza,ہنزہ,Popular dried; Gilgit-Baltistan
+Fig,Local,مقامی,Wild and cultivated
+Fig,Dark Brown,گہرا بھورا,Type grown in Pakistan
+Grapefruit,Marsh,مارش,Seedless white
+Grapefruit,Ruby Red,روبی ریڈ,Pigmented
+Grapefruit,Duncan,ڈنکن,Seeded; juice
+Lemon,Eureka,یوریکا,Common commercial
+Lemon,Rough Lemon,راف لیمن,Rootstock; juice; Punjab
+Lemon,Lisbon,لسبن,Heat tolerant
+Orange,Valencia,والینشیا,Late season; storage
+Orange,Washington Navel,واشنگٹن نیول,Navel; early
+Orange,Jaffa,جافہ,Sweet orange
+Orange,Blood Orange,بلڈ اورنج,Pigmented
+Kinnow,Kinnow,کنو,Mandarin hybrid; 80% Pakistan citrus
+Kinnow,Seedless,بے بیج,New selection
+Tangerine,Local,مقامی,Punjab
+Tangerine,Early,جلدی,Cold tolerant
+Lime,Kaghzi,کاغذی,Local lime; Punjab
+Lime,Persian,پرشین,Tahiti type
+Lime,Rough Lemon,راف لیمن,Used as lime substitute
+Grape,Thompson Seedless,تھامسن بے بیج,Punjab; Sargodha
+Grape,Flame Seedless,فلیم بے بیج,Early; central Punjab
+Grape,Perlette,پرلیٹ,Early white
+Grape,King's Ruby,کنگز روبی,Red seedless
+Grape,Cardinal,کارڈنل,Table grape
+Grape,Sundar Khani,سندر خانی,Local
+Grape,Askari,عسکری,Pakistan
+Grape,Hussaini,حسینی,Local variety
+Pomegranate Dwarf,Dwarf Kandhari,بونا کندھاری,Dwarf type
+Pomegranate Dwarf,Desi Dwarf,بونا دیسی,Compact plant
+Date Palm Fruit,Aseel,اصیل,Pakistani date; Punjab Sindh
+Date Palm Fruit,Dhakki,ڈھکی,Sindh dates
+Date Palm Fruit,Hillawi,ہلاوی,Iraqi origin; Pakistan
+Date Palm Fruit,Barhi,برہی,Soft sweet
+Date Palm Fruit,Zahidi,زہیدی,Semi-dry
+Olive,BARI Zaitoon-1,باری زیتون ۱,Punjab released; oil; Chakwal
+Olive,BARI Zaitoon-2,باری زیتون ۲,Oil purpose; erect; Punjab
+Olive,Arbequina,آربیکینا,International; Punjab trials
+Olive,Koroneiki,کورونیکی,Oil; high recovery
+Olive,Manzanilla,منزنیلا,Table olive
+Olive,Picual,پکیول,Oil variety
+Peach,Florida King,فلوریڈا کنگ,Low-chill; Punjab plains
+Peach,Early Grand,ایرلی گرانڈ,Early ripening
+Peach,Shan-i-Punjab,شانِ پنجاب,PAU low-chill
+Peach,Tropic Sweet,ٹراپک سوئٹ,Low-chill hybrid
+Apricot,Local,مقامی,Punjab; hills and plains
+Apricot,Hunza,ہنزہ,Northern Pakistan
+Apricot,Shakarpara,شکرپارہ,Sweet type
+Plum,Santa Rosa,سانٹا روزا,Japanese type; Punjab
+Plum,Black Amber,بلیک ایمبر,Prune plum
+Plum,Local,مقامی,Desi type
+Apple,Golden Delicious,گولڈن ڈیشس,Low-chill areas
+Apple,Red Delicious,ریڈ ڈیشس,Punjab hills
+Apple,Amri,امری,Local selection
+Apple,Kashmiri,کشمیری,Mountain variety
+Pear,Bagugosha,باگوگوشا,Summer pear; Punjab
+Pear,Patharnash,پٹھارناش,Hard pear; Punjab
+Pear,William,ولیم,Early
+Quince,Local,مقامی,Punjab
+Quince,Bereczki,بیریزکی,European type
+Persimmon,Fuyu,فیوئی,Non-astringent
+Persimmon,Hachiya,ہاچیا,Astringent; soft when ripe
+Persimmon,Local,مقامی,Desi amlok
+Strawberry Guava,Cattleyana,کیٹلیانا,Red strawberry guava
+Custard Apple,Local,مقامی,Sitaphal; Punjab
+Custard Apple,Balanagar,بالا نگر,Indian variety
+Wood Apple,Local,مقامی,Bel; Punjab
+Wood Apple,Large,بڑا,Selected type
+Karonda,Local,مقامی,Wild and cultivated; Punjab
+Karonda,Green,سبز,Unripe use
+Dragon Fruit,White Flesh,سفید گودا,Hylocereus undatus
+Dragon Fruit,Red Flesh,سرخ گودا,Red pulp; emerging in Pakistan
+Loquat,Tanaka,ٹاناکا,Large fruit
+Loquat,Golden Nugget,گولڈن نگر,Sweet
+Jujube,Chinese,چائنیز,Ziziphus jujuba
+Jujube,Desi Ber,دیسی بیر,Local
+Tamarind,Sweet,میٹھا املی,Sweet type; Punjab
+Tamarind,Sour,کھٹا املی,Traditional sour
+Amla,Balwant,بلونت,NA-10; early Nov; PAU Punjab
+Amla,Neelam,نیلم,NA-7; mid-season; PAU Punjab
+Amla,Kanchan,کنچن,NA-4; late Dec; processing; PAU Punjab
+Amla,Chakaiya,چکائیا,Traditional
+Strawberry,Chandler,چینڈلر,Winter crop; Punjab
+Strawberry,Festival,فیسٹیول,Day-neutral
+Strawberry,Winter Dawn,ونٹر ڈان,Cold season
+Pomegranate Sweet,Kandhari Sweet,میٹھا کندھاری,Sweet type
+Pomegranate Sweet,Bhagwa,بھگوا,Sweet red
+Pomelo,Chinese,چائنیز,Thick rind
+Pomelo,Local,مقامی,Punjab
+Kumquat,Nagami,ناگامی,Oval; Punjab
+Kumquat,Meiwa,میوا,Round sweet
+Calamondin,Local,مقامی,Ornamental and fruit; Punjab
+Carambola,Sweet,میٹھا امرود,Star fruit; Punjab
+Water Apple,Local,مقامی,Punjab
+Avocado,Hass,ہاس,Commercial
+Avocado,Fuerte,فیورٹے,Green skin
+Avocado,Local,مقامی,Emerging in Punjab
