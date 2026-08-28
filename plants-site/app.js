@@ -6,6 +6,56 @@
 
   var STORAGE_KEY = 'plant_directory_favourites';
   var CSV_URL = 'plants.csv';
+  var VARIETIES_CSV_URL = 'varieties.csv';
+
+  // Young plants of these fruits scorch in harsh, dry afternoon sun and benefit
+  // from shade protection while establishing — relevant in hot climates.
+  var SCORCH_PRONE = {
+    'lychee': 1, 'avocado': 1, 'dragon fruit': 1, 'kiwi': 1, 'soursop': 1,
+    'rambutan': 1, 'mangosteen': 1, 'custard apple': 1, 'carambola': 1,
+    'star fruit': 1, 'loquat': 1, 'papaya': 1
+  };
+
+  var LIGHT_META = {
+    'full sun': { icon: '☀️', cls: 'light-full', label: 'Full sun' },
+    'full sun / part shade': { icon: '⛅', cls: 'light-part', label: 'Full sun / part shade' },
+    'partial shade': { icon: '🌥️', cls: 'light-shade', label: 'Partial shade' }
+  };
+
+  function lightMeta(light) {
+    return LIGHT_META[String(light || '').trim().toLowerCase()] || null;
+  }
+
+  function plantIcon(name, category, cls) {
+    if (window.PLANT_ICONS && window.PLANT_ICONS.getIcon) {
+      return window.PLANT_ICONS.getIcon(name, category, cls);
+    }
+    return '';
+  }
+
+  // Resolve a favourite (plant or variety) to how it should appear in the PDF:
+  // display name (varieties shown as "Plant (Variety)") and its category.
+  function favouriteMeta(f) {
+    var base = f.base;
+    var variety = f.variety;
+    if (!variety && f.name && f.name.indexOf(' — ') >= 0) {
+      var parts = f.name.split(' — ');
+      base = parts[0];
+      variety = parts.slice(1).join(' — ');
+    }
+    var displayName = variety ? (base + ' (' + variety + ')') : f.name;
+    var lookupName = base || f.name;
+    var category = f.category || '';
+    if (!category && plantData && plantData.length) {
+      for (var i = 0; i < plantData.length; i++) {
+        if (plantData[i].name === lookupName) {
+          category = plantData[i].category || '';
+          break;
+        }
+      }
+    }
+    return { displayName: displayName, category: category };
+  }
 
   function getFavourites() {
     try {
@@ -33,11 +83,15 @@
     if (idx >= 0) {
       favourites[idx].quantity = (favourites[idx].quantity || 0) + quantity;
     } else {
-      favourites.push({
+      var entry = {
         name: plant.name,
         urdu_name: plant.urdu_name || '',
         quantity: quantity
-      });
+      };
+      if (plant.category) entry.category = plant.category;
+      if (plant.base) entry.base = plant.base;
+      if (plant.variety) entry.variety = plant.variety;
+      favourites.push(entry);
     }
     setFavourites(favourites.slice());
   }
@@ -122,37 +176,44 @@
       doc.text('Favourite Plants', 14, 20);
       doc.setFontSize(10);
       var startY = 28;
-      var col1 = 14;
-      var col2 = 70;
-      var col3 = 130;
+      var col1 = 14;    // Name
+      var col2 = 74;    // Urdu Name
+      var col3 = 118;   // Category
+      var col4 = 158;   // Qty
       doc.setFont('helvetica', 'normal');
       doc.text('Name', col1, startY);
       doc.text('Urdu Name', col2, startY);
-      doc.text('Quantity', col3, startY);
+      doc.text('Category', col3, startY);
+      doc.text('Qty', col4, startY);
       startY += 7;
       doc.setFontSize(9);
       favourites.forEach(function(f) {
-        if (startY > 270) {
+        if (startY > 265) {
           doc.addPage();
           startY = 20;
         }
+        var meta = favouriteMeta(f);
         doc.setFont('helvetica', 'normal');
-        doc.text(String(f.name).substring(0, 35), col1, startY);
+        doc.text(String(meta.displayName).substring(0, 32), col1, startY);
         if (fontBase64 && (f.urdu_name || '').trim()) {
           try {
             doc.setFont('Amiri', 'normal');
-            doc.text(String(f.urdu_name).substring(0, 25), col2, startY);
+            doc.text(String(f.urdu_name).substring(0, 22), col2, startY);
           } catch (e) {
             doc.setFont('helvetica', 'normal');
-            doc.text(String(f.urdu_name || '').substring(0, 25), col2, startY);
+            doc.text(String(f.urdu_name || '').substring(0, 22), col2, startY);
           }
         } else {
           doc.setFont('helvetica', 'normal');
-          doc.text(String(f.urdu_name || '').substring(0, 25), col2, startY);
+          doc.text(String(f.urdu_name || '').substring(0, 22), col2, startY);
         }
         doc.setFont('helvetica', 'normal');
-        doc.text(String(f.quantity || 1), col3, startY);
-        startY += 6;
+        doc.text(String(meta.category || '').substring(0, 20), col3, startY);
+        doc.text(String(f.quantity || 1), col4, startY);
+        // Blank writing line after each plant for on-the-spot notes when printed.
+        doc.setDrawColor(200);
+        doc.line(col1, startY + 5, 196, startY + 5);
+        startY += 12;
       });
       doc.save('plant-favourites.pdf');
     }).catch(function() {
@@ -161,23 +222,29 @@
       doc.text('Favourite Plants', 14, 20);
       doc.setFontSize(10);
       var startY = 28;
-      var col1 = 14;
-      var col2 = 70;
-      var col3 = 130;
+      var col1 = 14;    // Name
+      var col2 = 74;    // Urdu Name
+      var col3 = 118;   // Category
+      var col4 = 158;   // Qty
       doc.text('Name', col1, startY);
       doc.text('Urdu Name', col2, startY);
-      doc.text('Quantity', col3, startY);
+      doc.text('Category', col3, startY);
+      doc.text('Qty', col4, startY);
       startY += 7;
       doc.setFontSize(9);
       favourites.forEach(function(f) {
-        if (startY > 270) {
+        if (startY > 265) {
           doc.addPage();
           startY = 20;
         }
-        doc.text(String(f.name).substring(0, 35), col1, startY);
-        doc.text(String(f.urdu_name || '').substring(0, 25), col2, startY);
-        doc.text(String(f.quantity || 1), col3, startY);
-        startY += 6;
+        var meta = favouriteMeta(f);
+        doc.text(String(meta.displayName).substring(0, 32), col1, startY);
+        doc.text(String(f.urdu_name || '').substring(0, 22), col2, startY);
+        doc.text(String(meta.category || '').substring(0, 20), col3, startY);
+        doc.text(String(f.quantity || 1), col4, startY);
+        doc.setDrawColor(200);
+        doc.line(col1, startY + 5, 196, startY + 5);
+        startY += 12;
       });
       doc.save('plant-favourites.pdf');
     }).finally(function() {
@@ -257,6 +324,7 @@
     var gridEl = document.getElementById('plant-grid');
     var searchInput = document.getElementById('search');
     var categorySelect = document.getElementById('category');
+    var lightSelect = document.getElementById('light-filter');
     var viewGridBtn = document.getElementById('view-grid');
     var viewListBtn = document.getElementById('view-list');
     var resultCountEl = document.getElementById('result-count');
@@ -299,9 +367,12 @@
     function filterPlants() {
       var q = (searchInput && searchInput.value) ? searchInput.value.trim().toLowerCase() : '';
       var cat = (categorySelect && categorySelect.value) ? categorySelect.value : '';
+      var lightVal = (lightSelect && lightSelect.value) ? lightSelect.value : '';
       return plantData.filter(function(p) {
         var matchCat = !cat || (p.category === cat);
         if (!matchCat) return false;
+        var matchLight = !lightVal || (p.light === lightVal);
+        if (!matchLight) return false;
         if (!q) return true;
         var nameMatch = (p.name || '').toLowerCase().indexOf(q) >= 0;
         var urduMatch = (p.urdu_name || '').indexOf(q) >= 0;
@@ -316,14 +387,18 @@
         var fav = isFavourite(p.name);
         var qty = (favourites.find(function(f) { return f.name === p.name; }) || {}).quantity || 1;
         var detailUrl = 'plant.html?name=' + encodeURIComponent(slugFromName(p.name));
+        var lm = lightMeta(p.light);
+        var lightBadge = lm ? '<span class="light-badge light-badge-sm ' + lm.cls + '" title="Light requirement">' + lm.icon + ' ' + escapeHtml(lm.label) + '</span>' : '';
         return (
           '<li class="plant-card" role="listitem">' +
+            '<span class="plant-card-icon" aria-hidden="true">' + plantIcon(p.name, p.category) + '</span>' +
             '<h3>' + escapeHtml(p.name) + '</h3>' +
             (p.urdu_name ? '<p class="urdu-name">' + escapeHtml(p.urdu_name) + '</p>' : '') +
             (p.category ? '<span class="category-tag">' + escapeHtml(p.category) + '</span>' : '') +
+            lightBadge +
             '<div class="plant-card-actions">' +
               '<a href="' + detailUrl + '" class="btn btn-primary">View Details</a>' +
-              '<button type="button" class="btn btn-fav ' + (fav ? 'is-favourite' : '') + '" data-plant-name="' + escapeHtml(p.name) + '" data-urdu="' + escapeHtml(p.urdu_name || '') + '" aria-pressed="' + (fav ? 'true' : 'false') + '">' + (fav ? '♥ Favourited' : '♡ Favourite') + '</button>' +
+              '<button type="button" class="btn btn-fav ' + (fav ? 'is-favourite' : '') + '" data-plant-name="' + escapeHtml(p.name) + '" data-urdu="' + escapeHtml(p.urdu_name || '') + '" data-category="' + escapeHtml(p.category || '') + '" aria-pressed="' + (fav ? 'true' : 'false') + '">' + (fav ? '♥ Favourited' : '♡ Favourite') + '</button>' +
               '<div class="qty-selector" data-plant-name="' + escapeHtml(p.name) + '">' +
                 '<button type="button" data-qty="-1" aria-label="Decrease quantity">−</button>' +
                 '<input type="number" min="1" value="' + qty + '" class="qty-input" aria-label="Quantity">' +
@@ -337,13 +412,14 @@
       gridEl.querySelectorAll('.btn-fav').forEach(function(btn) {
         var name = btn.getAttribute('data-plant-name');
         var urdu = btn.getAttribute('data-urdu') || '';
+        var category = btn.getAttribute('data-category') || '';
         btn.addEventListener('click', function() {
           var qtyEl = btn.closest('.plant-card').querySelector('.qty-selector .qty-input');
           var qty = parseInt(qtyEl && qtyEl.value ? qtyEl.value : 1, 10) || 1;
           if (isFavourite(name)) {
             removeFavourite(name);
           } else {
-            addFavourite({ name: name, urdu_name: urdu }, qty);
+            addFavourite({ name: name, urdu_name: urdu, category: category }, qty);
           }
           renderGrid(filterPlants());
         });
@@ -412,6 +488,9 @@
     if (categorySelect) {
       categorySelect.addEventListener('change', runFilter);
     }
+    if (lightSelect) {
+      lightSelect.addEventListener('change', runFilter);
+    }
 
     if (exportPdfBtn) exportPdfBtn.addEventListener('click', exportToPdf);
 
@@ -443,7 +522,8 @@
             name: (r.name || '').trim(),
             urdu_name: (r.urdu_name || '').trim(),
             category: (r.category || '').trim(),
-            wikipedia_url: (r.wikipedia_url || '').trim()
+            wikipedia_url: (r.wikipedia_url || '').trim(),
+            light: (r.light || '').trim()
           };
         }).filter(function(p) { return p.name; });
 
@@ -545,6 +625,108 @@
       }).join('');
     }
 
+    function renderVarieties(plant, allVarieties) {
+      var section = document.getElementById('varieties');
+      var listEl = document.getElementById('varieties-list');
+      var subtitleEl = document.getElementById('varieties-subtitle');
+      if (!section || !listEl || !plant) return;
+      var matches = allVarieties.filter(function(v) {
+        return normalizePlantName(v.plant_name) === normalizePlantName(plant.name);
+      });
+      if (matches.length === 0) {
+        section.hidden = true;
+        return;
+      }
+      section.hidden = false;
+      if (subtitleEl) {
+        subtitleEl.textContent = matches.length + ' known ' +
+          (matches.length === 1 ? 'variety' : 'varieties') + ' of ' + plant.name;
+      }
+      listEl.innerHTML = matches.map(function(v) {
+        var favName = plant.name + ' — ' + v.variety_name;
+        var fav = isFavourite(favName);
+        var qty = (favourites.find(function(f) { return f.name === favName; }) || {}).quantity || 1;
+        return (
+          '<li class="variety-item" data-fav-name="' + escapeHtml(favName) + '" data-urdu="' + escapeHtml(v.urdu_name || '') + '" data-variety="' + escapeHtml(v.variety_name) + '">' +
+            '<span class="variety-name">' + escapeHtml(v.variety_name) + '</span>' +
+            (v.urdu_name ? '<span class="variety-urdu">' + escapeHtml(v.urdu_name) + '</span>' : '') +
+            (v.notes ? '<span class="variety-notes">' + escapeHtml(v.notes) + '</span>' : '') +
+            '<div class="variety-actions">' +
+              '<button type="button" class="btn btn-fav btn-fav-sm ' + (fav ? 'is-favourite' : '') + '" data-action="fav" aria-pressed="' + (fav ? 'true' : 'false') + '">' + (fav ? '♥ Favourited' : '♡ Favourite') + '</button>' +
+              '<div class="qty-selector" data-action="qty">' +
+                '<button type="button" data-qty="-1" aria-label="Decrease quantity">−</button>' +
+                '<input type="number" min="1" value="' + qty + '" class="qty-input" aria-label="Quantity">' +
+                '<button type="button" data-qty="1" aria-label="Increase quantity">+</button>' +
+              '</div>' +
+            '</div>' +
+          '</li>'
+        );
+      }).join('');
+
+      listEl.querySelectorAll('.variety-item').forEach(function(row) {
+        var favName = row.getAttribute('data-fav-name');
+        var urdu = row.getAttribute('data-urdu') || '';
+        var input = row.querySelector('.qty-input');
+        var favBtn = row.querySelector('[data-action="fav"]');
+        if (favBtn) {
+          favBtn.addEventListener('click', function() {
+            if (isFavourite(favName)) {
+              removeFavourite(favName);
+            } else {
+              var q = parseInt(input && input.value ? input.value : 1, 10) || 1;
+              addFavourite({ name: favName, urdu_name: urdu, base: plant.name, variety: row.getAttribute('data-variety') || '', category: plant.category || 'Fruit' }, q);
+            }
+            renderVarieties(plant, allVarieties);
+          });
+        }
+        if (input) {
+          input.addEventListener('change', function() {
+            var val = Math.max(1, parseInt(input.value, 10) || 1);
+            input.value = val;
+            if (isFavourite(favName)) setFavQuantity(favName, val);
+          });
+        }
+        row.querySelectorAll('.qty-selector button[data-qty]').forEach(function(b) {
+          b.addEventListener('click', function() {
+            var delta = parseInt(b.getAttribute('data-qty'), 10);
+            var current = parseInt(input && input.value ? input.value : 1, 10) || 1;
+            var next = Math.max(1, current + delta);
+            if (input) input.value = next;
+            if (isFavourite(favName)) updateFavQuantity(favName, delta);
+          });
+        });
+      });
+    }
+
+    function renderLightAndIcon(displayName, plant) {
+      var category = (plant && plant.category) || '';
+      var iconEl = document.getElementById('plant-detail-icon');
+      if (iconEl) iconEl.innerHTML = plantIcon(displayName, category, 'plant-icon-svg plant-icon-svg-lg');
+
+      var lightEl = document.getElementById('plant-light');
+      var lm = plant ? lightMeta(plant.light) : null;
+      if (lightEl) {
+        if (lm) {
+          lightEl.className = 'light-badge ' + lm.cls;
+          lightEl.innerHTML = '<span class="light-icon">' + lm.icon + '</span> Light: <strong>' + escapeHtml(lm.label) + '</strong>';
+          lightEl.hidden = false;
+        } else {
+          lightEl.hidden = true;
+        }
+      }
+
+      var noteEl = document.getElementById('plant-heat-note');
+      if (noteEl) {
+        var scorch = SCORCH_PRONE[normalizePlantName(displayName)];
+        if (scorch) {
+          noteEl.textContent = '🌡️ In hot, dry climates protect young plants from harsh afternoon sun until established.';
+          noteEl.hidden = false;
+        } else {
+          noteEl.hidden = true;
+        }
+      }
+    }
+
     showLoading(true);
     showError(false);
     showArticle(false);
@@ -565,7 +747,8 @@
               name: (r.name || '').trim(),
               urdu_name: (r.urdu_name || '').trim(),
               category: (r.category || '').trim(),
-              wikipedia_url: (r.wikipedia_url || '').trim()
+              wikipedia_url: (r.wikipedia_url || '').trim(),
+              light: (r.light || '').trim()
             };
           }).filter(function(p) { return p.name; });
           plantData = rows;
@@ -575,12 +758,37 @@
       });
     });
 
+    var varietiesPromise = new Promise(function(resolve) {
+      if (typeof Papa === 'undefined') {
+        resolve([]);
+        return;
+      }
+      Papa.parse(VARIETIES_CSV_URL, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          var rows = (results.data || []).map(function(r) {
+            return {
+              plant_name: (r.plant_name || '').trim(),
+              variety_name: (r.variety_name || '').trim(),
+              urdu_name: (r.urdu_name || '').trim(),
+              notes: (r.notes || '').trim()
+            };
+          }).filter(function(v) { return v.plant_name && v.variety_name; });
+          resolve(rows);
+        },
+        error: function() { resolve([]); }
+      });
+    });
+
     var wikiUrl = 'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(titleFromUrl);
     var wikiPromise = fetch(wikiUrl, { method: 'GET' }).then(function(res) { return res.json(); }).catch(function() { return null; });
 
-    Promise.all([csvPromise, wikiPromise]).then(function(results) {
+    Promise.all([csvPromise, wikiPromise, varietiesPromise]).then(function(results) {
       var data = results[0];
       var wikiData = results[1];
+      var varietiesData = results[2] || [];
       var currentPlant = findPlantByName(data, titleFromUrl);
       var displayName = (currentPlant && currentPlant.name) || titleFromUrl;
       var urduName = (currentPlant && currentPlant.urdu_name) || '';
@@ -593,6 +801,8 @@
       }
 
       showArticle(true);
+
+      renderLightAndIcon(displayName, currentPlant);
 
       var titleEl = document.getElementById('plant-title');
       var urduEl = document.getElementById('plant-urdu');
@@ -652,6 +862,7 @@
 
       if (currentPlant) {
         renderDetailFavUI(currentPlant);
+        renderVarieties(currentPlant, varietiesData);
         renderRelatedPlants(currentPlant, data);
 
         if (actionsEl) {

@@ -6,6 +6,7 @@
   <title>Plant Details — Pakistan Plant Directory</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="icons.js"></script>
 </head>
 <body>
   <header class="header">
@@ -31,8 +32,15 @@
     <article id="plant-detail" class="plant-detail" hidden>
       <div class="plant-detail-header">
         <a href="plants.html" class="back-link">← Back to Directory</a>
-        <h2 id="plant-title"></h2>
-        <p id="plant-urdu" class="plant-urdu"></p>
+        <div class="plant-detail-title-row">
+          <span id="plant-detail-icon" class="plant-detail-icon" aria-hidden="true"></span>
+          <div>
+            <h2 id="plant-title"></h2>
+            <p id="plant-urdu" class="plant-urdu"></p>
+          </div>
+        </div>
+        <div id="plant-light" class="light-badge" hidden></div>
+        <p id="plant-heat-note" class="heat-note" hidden></p>
       </div>
       <div class="plant-detail-content">
         <div class="plant-detail-media">
@@ -58,6 +66,12 @@
           </div>
         </div>
       </div>
+      <section id="varieties" class="varieties" hidden>
+        <h3>Varieties</h3>
+        <p id="varieties-subtitle" class="varieties-subtitle"></p>
+        <ul id="varieties-list" class="varieties-list"></ul>
+      </section>
+
       <section id="related-plants" class="related-plants" hidden>
         <h3>Related plants</h3>
         <p id="related-plants-subtitle" class="related-plants-subtitle"></p>

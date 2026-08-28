@@ -692,3 +692,177 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- Plant icons ---- */
+.plant-icon-svg {
+  width: 40px;
+  height: 40px;
+  display: block;
+}
+
+.plant-icon-svg-lg {
+  width: 64px;
+  height: 64px;
+}
+
+.plant-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: #eef3ea;
+  align-self: flex-start;
+}
+
+.plant-grid.view-list .plant-card {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.plant-grid.view-list .plant-card-icon {
+  align-self: center;
+}
+
+/* ---- Light requirement badge ---- */
+.light-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.9rem;
+  border-radius: 999px;
+  font-weight: 500;
+  align-self: flex-start;
+  border: 1px solid transparent;
+}
+
+.light-badge-sm {
+  font-size: 0.78rem;
+  padding: 0.2rem 0.55rem;
+}
+
+.light-badge .light-icon {
+  font-size: 1.05em;
+}
+
+.light-full {
+  background: #fdf3d6;
+  color: #8a6d1a;
+  border-color: #f0dca0;
+}
+
+.light-part {
+  background: #eaf2f8;
+  color: #35617d;
+  border-color: #c4dbe9;
+}
+
+.light-shade {
+  background: #eceef1;
+  color: #4a5568;
+  border-color: #d3d8df;
+}
+
+.heat-note {
+  margin-top: 0.6rem;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  background: #fbeee6;
+  border-left: 3px solid var(--color-accent);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+}
+
+/* ---- Show-page header layout ---- */
+.plant-detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0.5rem 0;
+}
+
+.plant-detail-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  background: #eef3ea;
+  flex-shrink: 0;
+}
+
+/* ---- Varieties section ---- */
+.varieties {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.varieties h3 {
+  margin: 0 0 0.25rem;
+  color: var(--color-primary);
+}
+
+.varieties-subtitle {
+  margin: 0 0 1rem;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.varieties-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.variety-item {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.variety-name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.variety-urdu {
+  font-family: var(--font-urdu);
+  font-size: 1.1rem;
+  color: var(--color-text-muted);
+}
+
+.variety-notes {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.variety-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.btn-fav-sm {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.6rem;
+}
+
+.variety-actions .qty-selector {
+  transform: scale(0.9);
+  transform-origin: left center;
+}

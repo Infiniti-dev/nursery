@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="icons.js"></script>
 </head>
 <body>
   <header class="header">
@@ -30,6 +31,15 @@
         <label for="category">Category</label>
         <select id="category">
           <option value="">All categories</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="light-filter">Light requirement</label>
+        <select id="light-filter">
+          <option value="">All light needs</option>
+          <option value="Full sun">☀️ Full sun</option>
+          <option value="Full sun / part shade">⛅ Full sun / part shade</option>
+          <option value="Partial shade">🌥️ Partial shade</option>
         </select>
       </div>
       <div class="control-group view-toggle">
