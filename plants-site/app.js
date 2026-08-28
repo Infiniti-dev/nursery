@@ -5,8 +5,17 @@
   var favourites = [];
 
   var STORAGE_KEY = 'plant_directory_favourites';
+  var NOTES_KEY = 'plant_directory_notes';
+  var EDITS_KEY = 'plant_directory_edits';
+  var CUSTOM_KEY = 'plant_directory_custom';
+  var CUSTOM_VARIETIES_KEY = 'plant_directory_custom_varieties';
   var CSV_URL = 'plants.csv';
   var VARIETIES_CSV_URL = 'varieties.csv';
+
+  // Column order used when parsing and re-exporting plants.csv.
+  var PLANT_FIELDS = ['name', 'urdu_name', 'common_names', 'category', 'wikipedia_url', 'light', 'water', 'growing_tips', 'garden_tips', 'region_tips'];
+  // Fields the AI prompt / apply step can populate (everything except name).
+  var AI_FIELDS = ['urdu_name', 'common_names', 'category', 'wikipedia_url', 'light', 'water', 'growing_tips', 'garden_tips', 'region_tips'];
 
   // Young plants of these fruits scorch in harsh, dry afternoon sun and benefit
   // from shade protection while establishing — relevant in hot climates.
@@ -46,15 +55,18 @@
     var displayName = variety ? (base + ' (' + variety + ')') : f.name;
     var lookupName = base || f.name;
     var category = f.category || '';
-    if (!category && plantData && plantData.length) {
+    var common = '';
+    if (plantData && plantData.length) {
       for (var i = 0; i < plantData.length; i++) {
-        if (plantData[i].name === lookupName) {
-          category = plantData[i].category || '';
+        if (plantData[i].name === lookupName || plantData[i]._orig === lookupName) {
+          var eff = applyEdits(plantData[i]);
+          if (!category) category = eff.category || '';
+          common = eff.common_names || '';
           break;
         }
       }
     }
-    return { displayName: displayName, category: category };
+    return { displayName: displayName, category: category, common_names: common };
   }
 
   function getFavourites() {
@@ -129,6 +141,374 @@
     if (el) el.textContent = favourites.length;
   }
 
+  // ---- Notes (keyed by plant name, decoupled from favourites) ----
+  function getNotes() {
+    try {
+      var raw = localStorage.getItem(NOTES_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function setNote(name, text) {
+    var notes = getNotes();
+    text = (text || '').trim();
+    if (text) notes[name] = text;
+    else delete notes[name];
+    try {
+      localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+    } catch (e) {}
+  }
+
+  // ---- Per-plant field overrides (keyed by original plant name) ----
+  function getEdits() {
+    try {
+      var raw = localStorage.getItem(EDITS_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function setEdit(name, fields) {
+    var edits = getEdits();
+    edits[name] = fields;
+    try {
+      localStorage.setItem(EDITS_KEY, JSON.stringify(edits));
+    } catch (e) {}
+  }
+
+  // ---- User-added plants ----
+  function getCustom() {
+    try {
+      var raw = localStorage.getItem(CUSTOM_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function addCustom(plant) {
+    var list = getCustom();
+    list.push(plant);
+    try {
+      localStorage.setItem(CUSTOM_KEY, JSON.stringify(list));
+    } catch (e) {}
+  }
+
+  // ---- User/AI-added varieties (match varieties.csv schema) ----
+  function getCustomVarieties() {
+    try {
+      var raw = localStorage.getItem(CUSTOM_VARIETIES_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Add varieties for a plant, de-duping by plant_name + variety_name.
+  function addCustomVarieties(plantName, varieties) {
+    var list = getCustomVarieties();
+    var seen = {};
+    list.forEach(function(v) {
+      seen[normalizePlantName(v.plant_name) + '|' + normalizePlantName(v.variety_name)] = true;
+    });
+    var added = 0;
+    (varieties || []).forEach(function(v) {
+      var vn = (v.variety_name || '').trim();
+      if (!vn) return;
+      var k = normalizePlantName(plantName) + '|' + normalizePlantName(vn);
+      if (seen[k]) return;
+      seen[k] = true;
+      list.push({
+        plant_name: plantName,
+        variety_name: vn,
+        urdu_name: (v.urdu_name || '').trim(),
+        notes: (v.notes || '').trim()
+      });
+      added++;
+    });
+    try {
+      localStorage.setItem(CUSTOM_VARIETIES_KEY, JSON.stringify(list));
+    } catch (e) {}
+    return added;
+  }
+
+  // Apply saved edits on top of a raw plant row. `_orig` is the stable key
+  // (original CSV / custom name) so notes and edits never orphan on rename.
+  function applyEdits(plant) {
+    var key = plant._orig || plant.name;
+    var edits = getEdits()[key];
+    var merged = { _orig: key };
+    PLANT_FIELDS.forEach(function(f) { merged[f] = plant[f] || ''; });
+    if (edits) {
+      PLANT_FIELDS.forEach(function(f) {
+        if (Object.prototype.hasOwnProperty.call(edits, f)) merged[f] = edits[f];
+      });
+    }
+    return merged;
+  }
+
+  // Base (CSV) rows + custom additions, with edits applied. `plantData` holds
+  // the raw base+custom rows; this returns the display/effective view.
+  function effectivePlants() {
+    return plantData.map(applyEdits);
+  }
+
+  // ---- CSV export helpers ----
+  function csvCell(v) {
+    v = (v == null) ? '' : String(v);
+    if (/[",\n]/.test(v)) return '"' + v.replace(/"/g, '""') + '"';
+    return v;
+  }
+
+  function triggerDownload(filename, content, mime) {
+    var blob = new Blob([content], { type: mime + ';charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  // Full effective directory (base + edits + custom) so the file can replace plants.csv.
+  function downloadCsv() {
+    var lines = [PLANT_FIELDS.join(',')];
+    effectivePlants().forEach(function(p) {
+      lines.push(PLANT_FIELDS.map(function(f) { return csvCell(p[f]); }).join(','));
+    });
+    triggerDownload('plants.csv', lines.join('\n'), 'text/csv');
+  }
+
+  // Notes have no column in plants.csv, so they persist as their own file.
+  function downloadNotes() {
+    var notes = getNotes();
+    var keys = Object.keys(notes);
+    if (keys.length === 0) {
+      alert('No notes to download yet.');
+      return;
+    }
+    var lines = ['name,note'];
+    keys.forEach(function(k) {
+      lines.push(csvCell(k) + ',' + csvCell(notes[k]));
+    });
+    triggerDownload('plant-notes.csv', lines.join('\n'), 'text/csv');
+  }
+
+  // AI/user-added varieties, in the same schema as varieties.csv.
+  function downloadVarieties() {
+    var list = getCustomVarieties();
+    if (list.length === 0) {
+      alert('No added varieties yet. Use "✨ Copy AI prompt" in a plant\'s Edit dialog to get some.');
+      return;
+    }
+    var cols = ['plant_name', 'variety_name', 'urdu_name', 'notes'];
+    var lines = [cols.join(',')];
+    list.forEach(function(v) {
+      lines.push(cols.map(function(c) { return csvCell(v[c]); }).join(','));
+    });
+    triggerDownload('varieties.csv', lines.join('\n'), 'text/csv');
+  }
+
+  // ---- Shared edit modal (built once, reused on grid + detail pages) ----
+  var editModalEl = null;
+  var editModalSave = null;
+  var pendingEditVarieties = null;
+
+  function editField(name, label) {
+    return '<label class="form-field"><span>' + label + '</span>' +
+      '<input type="text" name="' + name + '"></label>';
+  }
+
+  function editArea(name, label) {
+    return '<label class="form-field"><span>' + label + '</span>' +
+      '<textarea name="' + name + '" rows="2"></textarea></label>';
+  }
+
+  // Build a copy-paste prompt so the user can get plant details from any AI
+  // chat (ChatGPT/Claude/etc.) and paste the JSON reply back — no API key needed.
+  function buildAiPrompt(name) {
+    return 'You are a horticulture expert advising a home gardener in Punjab, Pakistan. ' +
+      'Assume Punjab\'s climate: very hot dry summers (up to ~45°C), mild winters with occasional light frost, ' +
+      'a monsoon in July–August, and mostly alkaline soils. Tailor ALL advice to these conditions. ' +
+      'For the plant named "' + name + '", reply with ONLY a JSON object (no markdown, no commentary) using exactly these keys:\n' +
+      '- "urdu_name": the plant name in Urdu script\n' +
+      '- "common_names": comma-separated common/local English and Urdu names\n' +
+      '- "category": a short category (e.g. Fruit, Palm, Flowering Tree, Shading Tree, Ground Cover, Evergreen, Decorative)\n' +
+      '- "wikipedia_url": the full English Wikipedia URL for this plant\n' +
+      '- "light": exactly one of "Full sun", "Full sun / part shade", "Partial shade"\n' +
+      '- "water": short water requirement for Punjab (e.g. "Moderate; water 2–3x/week in summer")\n' +
+      '- "growing_tips": one or two sentences of practical growing tips (soil, best planting season/month in Punjab, pruning)\n' +
+      '- "garden_tips": one or two sentences on using it in a mixed garden (good companions, placement, spacing)\n' +
+      '- "region_tips": Punjab-specific advice. State clearly whether it grows well in Punjab. ' +
+      'If it is NOT well suited to Punjab\'s climate, say so and suggest one or two compatible alternative plants that give a similar effect.\n' +
+      '- "varieties": an array (may be empty) of the best varieties for Punjab, each an object ' +
+      'with "variety_name", "urdu_name" (Urdu script) and "notes" (a short note: season, flavour/colour, or why it suits Punjab)\n' +
+      'Keep everything concise. Example: {"urdu_name":"آم","common_names":"Mango, Aam","category":"Fruit",' +
+      '"wikipedia_url":"https://en.wikipedia.org/wiki/Mango","light":"Full sun",' +
+      '"water":"Moderate; deep watering in summer","growing_tips":"Plant in deep well-drained soil Feb–Mar; prune after fruiting.",' +
+      '"garden_tips":"Give it space as a canopy tree; underplant with shade-tolerant shrubs.",' +
+      '"region_tips":"Grows very well across Punjab; a classic backyard tree.",' +
+      '"varieties":[{"variety_name":"Sindhri","urdu_name":"سندھڑی","notes":"Early, sweet; June"},' +
+      '{"variety_name":"Chaunsa","urdu_name":"چونسا","notes":"Aromatic; July–Aug"}]}';
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function(resolve, reject) {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        resolve();
+      } catch (e) { reject(e); }
+    });
+  }
+
+  // Leniently pull a JSON object out of an AI reply (handles code fences / stray prose).
+  function parseAiJson(text) {
+    if (!text) return null;
+    var start = text.indexOf('{');
+    var end = text.lastIndexOf('}');
+    if (start < 0 || end <= start) return null;
+    try {
+      return JSON.parse(text.substring(start, end + 1));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function buildEditModal() {
+    if (editModalEl) return editModalEl;
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.hidden = true;
+    overlay.innerHTML =
+      '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">' +
+        '<h3 id="edit-modal-title">Edit plant</h3>' +
+        '<form id="edit-plant-form" class="plant-form">' +
+          editField('name', 'Name') +
+          editField('urdu_name', 'Urdu name') +
+          editField('common_names', 'Common names') +
+          editField('category', 'Category') +
+          editField('wikipedia_url', 'Wikipedia URL') +
+          editField('light', 'Light (Full sun / Full sun / part shade / Partial shade)') +
+          editField('water', 'Water requirement') +
+          editArea('growing_tips', 'Growing tips') +
+          editArea('garden_tips', 'Mixed-garden tips') +
+          editArea('region_tips', 'Punjab (Pakistan) tips & alternatives') +
+          '<label class="form-field"><span>Notes</span><textarea name="notes" rows="3"></textarea></label>' +
+          '<div class="ai-assist">' +
+            '<div class="ai-assist-row">' +
+              '<button type="button" class="btn btn-secondary" data-action="copy-prompt">✨ Copy AI prompt</button>' +
+              '<span class="ai-assist-hint">Paste it into ChatGPT / Claude, then paste the JSON reply below.</span>' +
+            '</div>' +
+            '<textarea name="ai_response" rows="3" placeholder="Paste the AI\'s JSON reply here…"></textarea>' +
+            '<button type="button" class="btn btn-secondary" data-action="apply-ai">Apply AI response</button>' +
+            '<p class="ai-assist-status" data-role="ai-status" hidden></p>' +
+          '</div>' +
+          '<div class="modal-actions">' +
+            '<button type="button" class="btn btn-secondary" data-action="cancel">Cancel</button>' +
+            '<button type="submit" class="btn btn-primary">Save</button>' +
+          '</div>' +
+        '</form>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    editModalEl = overlay;
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) closeEditModal(); });
+    overlay.querySelector('[data-action="cancel"]').addEventListener('click', closeEditModal);
+    overlay.querySelector('#edit-plant-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      if (editModalSave) editModalSave();
+    });
+
+    function fld(n) { return overlay.querySelector('[name="' + n + '"]'); }
+    function status(msg, ok) {
+      var el = overlay.querySelector('[data-role="ai-status"]');
+      el.textContent = msg;
+      el.hidden = false;
+      el.className = 'ai-assist-status' + (ok ? ' ok' : ' warn');
+    }
+    overlay.querySelector('[data-action="copy-prompt"]').addEventListener('click', function() {
+      var name = (fld('name').value || '').trim();
+      if (!name) { status('Enter a plant name first.', false); return; }
+      copyText(buildAiPrompt(name)).then(function() {
+        status('Prompt copied. Paste it into your AI, then paste the reply below.', true);
+      }).catch(function() {
+        status('Could not copy automatically — the prompt is in the box below; copy it manually.', false);
+        fld('ai_response').value = buildAiPrompt(name);
+      });
+    });
+    overlay.querySelector('[data-action="apply-ai"]').addEventListener('click', function() {
+      var data = parseAiJson(fld('ai_response').value);
+      if (!data) { status('Could not read JSON from that reply. Paste the AI\'s JSON object.', false); return; }
+      var filled = [];
+      AI_FIELDS.forEach(function(f) {
+        if (data[f] != null && String(data[f]).trim() && fld(f)) {
+          fld(f).value = String(data[f]).trim();
+          filled.push(f);
+        }
+      });
+      var vCount = 0;
+      if (Array.isArray(data.varieties) && data.varieties.length) {
+        pendingEditVarieties = data.varieties;
+        vCount = data.varieties.length;
+      }
+      if (filled.length || vCount) {
+        var msg = 'Filled: ' + (filled.join(', ') || 'none');
+        if (vCount) msg += ' · ' + vCount + ' varieties (saved on Save)';
+        status(msg + '. Review, then Save.', true);
+      } else {
+        status('No matching fields found in that reply.', false);
+      }
+    });
+    return overlay;
+  }
+
+  function closeEditModal() {
+    if (editModalEl) editModalEl.hidden = true;
+    editModalSave = null;
+  }
+
+  function openEditModal(plant, onSave) {
+    buildEditModal();
+    var key = plant._orig || plant.name;
+    function fld(n) { return editModalEl.querySelector('[name="' + n + '"]'); }
+    PLANT_FIELDS.forEach(function(f) { fld(f).value = plant[f] || ''; });
+    fld('notes').value = getNotes()[key] || '';
+    var aiResp = fld('ai_response');
+    if (aiResp) aiResp.value = '';
+    var aiStatus = editModalEl.querySelector('[data-role="ai-status"]');
+    if (aiStatus) aiStatus.hidden = true;
+    pendingEditVarieties = null;
+    editModalSave = function() {
+      var edit = {};
+      PLANT_FIELDS.forEach(function(f) { edit[f] = fld(f).value.trim(); });
+      setEdit(key, edit);
+      setNote(key, fld('notes').value);
+      if (pendingEditVarieties) {
+        addCustomVarieties(edit.name || plant.name, pendingEditVarieties);
+        pendingEditVarieties = null;
+      }
+      closeEditModal();
+      if (onSave) onSave();
+    };
+    editModalEl.hidden = false;
+    var first = editModalEl.querySelector('[name="name"]');
+    if (first) first.focus();
+  }
+
   var pdfUrduFontBase64 = null;
 
   function arrayBufferToBase64(buffer) {
@@ -143,10 +523,14 @@
   function loadUrduFont() {
     if (pdfUrduFontBase64) return Promise.resolve(pdfUrduFontBase64);
     var url = 'https://raw.githubusercontent.com/google/fonts/main/ofl/amiri/Amiri-Regular.ttf';
-    return fetch(url).then(function(res) { return res.arrayBuffer(); }).then(function(buf) {
+    // Race the fetch against a timeout so PDF export still works offline / when
+    // the CDN is unreachable (falls back to Latin-only text).
+    var fetched = fetch(url).then(function(res) { return res.arrayBuffer(); }).then(function(buf) {
       pdfUrduFontBase64 = arrayBufferToBase64(buf);
       return pdfUrduFontBase64;
     });
+    var timeout = new Promise(function(resolve) { setTimeout(function() { resolve(null); }, 20000); });
+    return Promise.race([fetched, timeout]);
   }
 
   function exportToPdf() {
@@ -164,95 +548,102 @@
       btn.disabled = true;
       btn.textContent = 'Preparing PDF…';
     }
-    loadUrduFont().then(function(fontBase64) {
-      var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      if (fontBase64) {
-        try {
-          doc.addFileToVFS('Amiri-Regular.ttf', fontBase64);
-          doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
-        } catch (e) {}
-      }
-      doc.setFontSize(16);
-      doc.text('Favourite Plants', 14, 20);
-      doc.setFontSize(10);
-      var startY = 28;
-      var col1 = 14;    // Name
-      var col2 = 74;    // Urdu Name
-      var col3 = 118;   // Category
-      var col4 = 158;   // Qty
-      doc.setFont('helvetica', 'normal');
-      doc.text('Name', col1, startY);
-      doc.text('Urdu Name', col2, startY);
-      doc.text('Category', col3, startY);
-      doc.text('Qty', col4, startY);
-      startY += 7;
-      doc.setFontSize(9);
-      favourites.forEach(function(f) {
-        if (startY > 265) {
-          doc.addPage();
-          startY = 20;
-        }
-        var meta = favouriteMeta(f);
-        doc.setFont('helvetica', 'normal');
-        doc.text(String(meta.displayName).substring(0, 32), col1, startY);
-        if (fontBase64 && (f.urdu_name || '').trim()) {
-          try {
-            doc.setFont('Amiri', 'normal');
-            doc.text(String(f.urdu_name).substring(0, 22), col2, startY);
-          } catch (e) {
-            doc.setFont('helvetica', 'normal');
-            doc.text(String(f.urdu_name || '').substring(0, 22), col2, startY);
-          }
-        } else {
-          doc.setFont('helvetica', 'normal');
-          doc.text(String(f.urdu_name || '').substring(0, 22), col2, startY);
-        }
-        doc.setFont('helvetica', 'normal');
-        doc.text(String(meta.category || '').substring(0, 20), col3, startY);
-        doc.text(String(f.quantity || 1), col4, startY);
-        // Blank writing line after each plant for on-the-spot notes when printed.
-        doc.setDrawColor(200);
-        doc.line(col1, startY + 5, 196, startY + 5);
-        startY += 12;
-      });
-      doc.save('plant-favourites.pdf');
-    }).catch(function() {
-      var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      doc.setFontSize(16);
-      doc.text('Favourite Plants', 14, 20);
-      doc.setFontSize(10);
-      var startY = 28;
-      var col1 = 14;    // Name
-      var col2 = 74;    // Urdu Name
-      var col3 = 118;   // Category
-      var col4 = 158;   // Qty
-      doc.text('Name', col1, startY);
-      doc.text('Urdu Name', col2, startY);
-      doc.text('Category', col3, startY);
-      doc.text('Qty', col4, startY);
-      startY += 7;
-      doc.setFontSize(9);
-      favourites.forEach(function(f) {
-        if (startY > 265) {
-          doc.addPage();
-          startY = 20;
-        }
-        var meta = favouriteMeta(f);
-        doc.text(String(meta.displayName).substring(0, 32), col1, startY);
-        doc.text(String(f.urdu_name || '').substring(0, 22), col2, startY);
-        doc.text(String(meta.category || '').substring(0, 20), col3, startY);
-        doc.text(String(f.quantity || 1), col4, startY);
-        doc.setDrawColor(200);
-        doc.line(col1, startY + 5, 196, startY + 5);
-        startY += 12;
-      });
-      doc.save('plant-favourites.pdf');
+    loadUrduFont().catch(function() { return null; }).then(function(fontBase64) {
+      renderPdf(fontBase64);
     }).finally(function() {
       if (btn) {
         btn.disabled = false;
         btn.textContent = 'Export Favourites as PDF';
       }
     });
+  }
+
+  // Each favourite prints as two rows: details, then its note (or a blank
+  // underline to write on when printed).
+  function renderPdf(fontBase64) {
+    var jsPDF = window.jspdf && window.jspdf.jsPDF;
+    var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    if (fontBase64) {
+      try {
+        doc.addFileToVFS('Amiri-Regular.ttf', fontBase64);
+        doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
+      } catch (e) {}
+    }
+    doc.setFontSize(16);
+    doc.text('Favourite Plants', 14, 20);
+
+    var notes = getNotes();
+    var col1 = 14;    // Name
+    var col2 = 74;    // Urdu Name
+    var col3 = 118;   // Category
+    var col4 = 158;   // Qty
+    var startY = 30;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Name', col1, startY);
+    doc.text('Urdu Name', col2, startY);
+    doc.text('Category', col3, startY);
+    doc.text('Qty', col4, startY);
+    startY += 7;
+
+    favourites.forEach(function(f) {
+      var meta = favouriteMeta(f);
+      var note = (notes[f.name] || '').trim();
+      var common = (meta.common_names || '').trim();
+      var commonLines = common ? doc.splitTextToSize('Common names: ' + common, 182) : null;
+      var noteLines = note ? doc.splitTextToSize('Notes: ' + note, 182) : null;
+      var blockH = (commonLines ? commonLines.length * 4 : 0) + 5 + (noteLines ? noteLines.length * 4.5 : 4) + 4;
+      if (startY + blockH > 285) {
+        doc.addPage();
+        startY = 20;
+      }
+
+      // Row 1 — details
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(meta.displayName).substring(0, 32), col1, startY);
+      if (fontBase64 && (f.urdu_name || '').trim()) {
+        try {
+          doc.setFont('Amiri', 'normal');
+          doc.text(String(f.urdu_name).substring(0, 22), col2, startY);
+        } catch (e) {
+          doc.setFont('helvetica', 'normal');
+          doc.text(String(f.urdu_name || '').substring(0, 22), col2, startY);
+        }
+      } else {
+        doc.setFont('helvetica', 'normal');
+        doc.text(String(f.urdu_name || '').substring(0, 22), col2, startY);
+      }
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(meta.category || '').substring(0, 20), col3, startY);
+      doc.text(String(f.quantity || 1), col4, startY);
+
+      // Optional common-names line under the details
+      var y = startY;
+      if (commonLines) {
+        y += 4;
+        doc.setFontSize(8);
+        doc.setTextColor(120);
+        doc.text(commonLines, col1, y);
+        y += (commonLines.length - 1) * 4;
+        doc.setTextColor(0);
+      }
+
+      // Row 2 — note text, or a blank line to write on
+      var ny = y + 5;
+      if (noteLines) {
+        doc.setFontSize(8);
+        doc.setTextColor(90);
+        doc.text(noteLines, col1, ny);
+        doc.setTextColor(0);
+        startY = ny + noteLines.length * 4.5 + 4;
+      } else {
+        doc.setDrawColor(200);
+        doc.line(col1, ny, 196, ny);
+        startY = ny + 7;
+      }
+    });
+    doc.save('plant-favourites.pdf');
   }
 
   function renderFavouritesSection() {
@@ -267,24 +658,29 @@
       return;
     }
     section.hidden = false;
+    var notes = getNotes();
     listEl.innerHTML = favourites.map(function(f) {
       var qty = Math.max(1, parseInt(f.quantity, 10) || 1);
       return (
         '<div class="fav-item" data-name="' + escapeHtml(f.name) + '">' +
-          '<span class="fav-item-name">' + escapeHtml(f.name) + '</span>' +
-          '<span class="fav-item-urdu">' + escapeHtml(f.urdu_name || '') + '</span>' +
-          '<div class="fav-item-qty">' +
-            '<button type="button" data-action="decrease" aria-label="Decrease">−</button>' +
-            '<input type="number" min="1" value="' + qty + '" data-action="input" aria-label="Quantity">' +
-            '<button type="button" data-action="increase" aria-label="Increase">+</button>' +
+          '<div class="fav-item-main">' +
+            '<span class="fav-item-name">' + escapeHtml(f.name) + '</span>' +
+            '<span class="fav-item-urdu">' + escapeHtml(f.urdu_name || '') + '</span>' +
+            '<div class="fav-item-qty">' +
+              '<button type="button" data-action="decrease" aria-label="Decrease">−</button>' +
+              '<input type="number" min="1" value="' + qty + '" data-action="input" aria-label="Quantity">' +
+              '<button type="button" data-action="increase" aria-label="Increase">+</button>' +
+            '</div>' +
+            '<button type="button" class="fav-item-remove" data-action="remove">Remove</button>' +
           '</div>' +
-          '<button type="button" class="fav-item-remove" data-action="remove">Remove</button>' +
+          '<textarea class="fav-item-notes" data-action="notes" rows="2" placeholder="Add notes for this plant…">' + escapeHtml(notes[f.name] || '') + '</textarea>' +
         '</div>'
       );
     }).join('');
     listEl.querySelectorAll('.fav-item').forEach(function(row) {
       var name = row.getAttribute('data-name');
       var qtyInput = row.querySelector('input[data-action="input"]');
+      var notesInput = row.querySelector('[data-action="notes"]');
       row.querySelector('[data-action="decrease"]').addEventListener('click', function() {
         updateFavQuantity(name, -1);
       });
@@ -294,6 +690,11 @@
       if (qtyInput) {
         qtyInput.addEventListener('change', function() {
           setFavQuantity(name, qtyInput.value);
+        });
+      }
+      if (notesInput) {
+        notesInput.addEventListener('change', function() {
+          setNote(name, notesInput.value);
         });
       }
       row.querySelector('[data-action="remove"]').addEventListener('click', function() {
@@ -358,7 +759,7 @@
 
     function getCategories() {
       var set = {};
-      plantData.forEach(function(p) {
+      effectivePlants().forEach(function(p) {
         if (p.category) set[p.category] = true;
       });
       return Object.keys(set).sort();
@@ -368,7 +769,7 @@
       var q = (searchInput && searchInput.value) ? searchInput.value.trim().toLowerCase() : '';
       var cat = (categorySelect && categorySelect.value) ? categorySelect.value : '';
       var lightVal = (lightSelect && lightSelect.value) ? lightSelect.value : '';
-      return plantData.filter(function(p) {
+      return effectivePlants().filter(function(p) {
         var matchCat = !cat || (p.category === cat);
         if (!matchCat) return false;
         var matchLight = !lightVal || (p.light === lightVal);
@@ -376,7 +777,8 @@
         if (!q) return true;
         var nameMatch = (p.name || '').toLowerCase().indexOf(q) >= 0;
         var urduMatch = (p.urdu_name || '').indexOf(q) >= 0;
-        return nameMatch || urduMatch;
+        var commonMatch = (p.common_names || '').toLowerCase().indexOf(q) >= 0;
+        return nameMatch || urduMatch || commonMatch;
       });
     }
 
@@ -398,6 +800,7 @@
             lightBadge +
             '<div class="plant-card-actions">' +
               '<a href="' + detailUrl + '" class="btn btn-primary">View Details</a>' +
+              '<button type="button" class="btn btn-secondary btn-edit" data-plant-orig="' + escapeHtml(p._orig || p.name) + '">Edit</button>' +
               '<button type="button" class="btn btn-fav ' + (fav ? 'is-favourite' : '') + '" data-plant-name="' + escapeHtml(p.name) + '" data-urdu="' + escapeHtml(p.urdu_name || '') + '" data-category="' + escapeHtml(p.category || '') + '" aria-pressed="' + (fav ? 'true' : 'false') + '">' + (fav ? '♥ Favourited' : '♡ Favourite') + '</button>' +
               '<div class="qty-selector" data-plant-name="' + escapeHtml(p.name) + '">' +
                 '<button type="button" data-qty="-1" aria-label="Decrease quantity">−</button>' +
@@ -422,6 +825,14 @@
             addFavourite({ name: name, urdu_name: urdu, category: category }, qty);
           }
           renderGrid(filterPlants());
+        });
+      });
+
+      gridEl.querySelectorAll('.btn-edit').forEach(function(btn) {
+        var orig = btn.getAttribute('data-plant-orig');
+        btn.addEventListener('click', function() {
+          var plant = effectivePlants().filter(function(p) { return p._orig === orig; })[0];
+          if (plant) openEditModal(plant, function() { renderGrid(filterPlants()); });
         });
       });
 
@@ -494,6 +905,47 @@
 
     if (exportPdfBtn) exportPdfBtn.addEventListener('click', exportToPdf);
 
+    var downloadCsvBtn = document.getElementById('download-csv');
+    if (downloadCsvBtn) downloadCsvBtn.addEventListener('click', downloadCsv);
+    var downloadNotesBtn = document.getElementById('download-notes');
+    if (downloadNotesBtn) downloadNotesBtn.addEventListener('click', downloadNotes);
+    var downloadVarBtn = document.getElementById('download-varieties');
+    if (downloadVarBtn) downloadVarBtn.addEventListener('click', downloadVarieties);
+
+    var toggleAddBtn = document.getElementById('toggle-add-plant');
+    var addPlantForm = document.getElementById('add-plant-form');
+    if (toggleAddBtn && addPlantForm) {
+      toggleAddBtn.addEventListener('click', function() {
+        addPlantForm.hidden = !addPlantForm.hidden;
+      });
+    }
+    if (addPlantForm) {
+      addPlantForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        function fv(n) {
+          var el = addPlantForm.querySelector('[name="' + n + '"]');
+          return el ? el.value.trim() : '';
+        }
+        var name = fv('name');
+        if (!name) { alert('Plant name is required.'); return; }
+        var plant = { _orig: name };
+        PLANT_FIELDS.forEach(function(f) { plant[f] = fv(f); });
+        addCustom(plant);
+        plantData.push(plant);
+        var categories = getCategories();
+        if (categorySelect) {
+          var existing = {};
+          Array.prototype.forEach.call(categorySelect.options, function(o) { existing[o.value] = true; });
+          categories.forEach(function(c) {
+            if (!existing[c]) categorySelect.appendChild(new Option(c, c));
+          });
+        }
+        addPlantForm.reset();
+        addPlantForm.hidden = true;
+        runFilter();
+      });
+    }
+
     window.addEventListener('hashchange', applyPageView);
     applyPageView();
 
@@ -518,14 +970,27 @@
         if (directoryEl) directoryEl.hidden = false;
         var rows = results.data || [];
         plantData = rows.map(function(r) {
+          var name = (r.name || '').trim();
           return {
-            name: (r.name || '').trim(),
+            _orig: name,
+            name: name,
             urdu_name: (r.urdu_name || '').trim(),
+            common_names: (r.common_names || '').trim(),
             category: (r.category || '').trim(),
             wikipedia_url: (r.wikipedia_url || '').trim(),
-            light: (r.light || '').trim()
+            light: (r.light || '').trim(),
+            water: (r.water || '').trim(),
+            growing_tips: (r.growing_tips || '').trim(),
+            garden_tips: (r.garden_tips || '').trim(),
+            region_tips: (r.region_tips || '').trim()
           };
         }).filter(function(p) { return p.name; });
+
+        // Merge user-added plants so they appear in the directory.
+        getCustom().forEach(function(c) {
+          c._orig = c._orig || c.name;
+          plantData.push(c);
+        });
 
         var categories = getCategories();
         if (categorySelect) {
@@ -630,9 +1095,12 @@
       var listEl = document.getElementById('varieties-list');
       var subtitleEl = document.getElementById('varieties-subtitle');
       if (!section || !listEl || !plant) return;
-      var matches = allVarieties.filter(function(v) {
+      var custom = getCustomVarieties().filter(function(v) {
         return normalizePlantName(v.plant_name) === normalizePlantName(plant.name);
       });
+      var matches = allVarieties.filter(function(v) {
+        return normalizePlantName(v.plant_name) === normalizePlantName(plant.name);
+      }).concat(custom);
       if (matches.length === 0) {
         section.hidden = true;
         return;
@@ -743,14 +1211,25 @@
         skipEmptyLines: true,
         complete: function(results) {
           var rows = (results.data || []).map(function(r) {
+            var name = (r.name || '').trim();
             return {
-              name: (r.name || '').trim(),
+              _orig: name,
+              name: name,
               urdu_name: (r.urdu_name || '').trim(),
+              common_names: (r.common_names || '').trim(),
               category: (r.category || '').trim(),
               wikipedia_url: (r.wikipedia_url || '').trim(),
-              light: (r.light || '').trim()
+              light: (r.light || '').trim(),
+              water: (r.water || '').trim(),
+              growing_tips: (r.growing_tips || '').trim(),
+              garden_tips: (r.garden_tips || '').trim(),
+              region_tips: (r.region_tips || '').trim()
             };
           }).filter(function(p) { return p.name; });
+          getCustom().forEach(function(c) {
+            c._orig = c._orig || c.name;
+            rows.push(c);
+          });
           plantData = rows;
           resolve(rows);
         },
@@ -790,6 +1269,7 @@
       var wikiData = results[1];
       var varietiesData = results[2] || [];
       var currentPlant = findPlantByName(data, titleFromUrl);
+      if (currentPlant) currentPlant = applyEdits(currentPlant);
       var displayName = (currentPlant && currentPlant.name) || titleFromUrl;
       var urduName = (currentPlant && currentPlant.urdu_name) || '';
       var hasWiki = wikiData && wikiData.title && (wikiData.type === 'standard' || wikiData.extract);
@@ -826,6 +1306,52 @@
       if (urduEl) {
         urduEl.textContent = urduName;
         urduEl.hidden = !urduName;
+      }
+      var commonEl = document.getElementById('plant-common');
+      if (commonEl) {
+        var commonNames = (currentPlant && currentPlant.common_names) || '';
+        commonEl.textContent = commonNames ? 'Also known as: ' + commonNames : '';
+        commonEl.hidden = !commonNames;
+      }
+
+      // Care tips (water / growing / mixed-garden)
+      var careEl = document.getElementById('plant-care');
+      if (careEl) {
+        var careMap = [
+          { key: 'water', el: 'care-water' },
+          { key: 'growing_tips', el: 'care-growing' },
+          { key: 'garden_tips', el: 'care-garden' },
+          { key: 'region_tips', el: 'care-region' }
+        ];
+        var anyCare = false;
+        careMap.forEach(function(c) {
+          var val = (currentPlant && currentPlant[c.key]) || '';
+          var dd = document.getElementById(c.el);
+          var item = dd ? dd.closest('.plant-care-item') : null;
+          if (dd) dd.textContent = val;
+          if (item) item.hidden = !val;
+          if (val) anyCare = true;
+        });
+        careEl.hidden = !anyCare;
+      }
+
+      // Notes + edit — keyed by the stable original name.
+      var noteKey = (currentPlant && currentPlant._orig) || displayName;
+      var notesInput = document.getElementById('plant-notes-input');
+      var notesBlock = document.getElementById('plant-notes-block');
+      if (notesInput && notesBlock) {
+        notesBlock.hidden = false;
+        notesInput.value = getNotes()[noteKey] || '';
+        notesInput.addEventListener('change', function() {
+          setNote(noteKey, notesInput.value);
+        });
+      }
+      var editBtn = document.getElementById('detail-edit-btn');
+      if (editBtn && currentPlant) {
+        editBtn.hidden = false;
+        editBtn.addEventListener('click', function() {
+          openEditModal(currentPlant, function() { window.location.reload(); });
+        });
       }
 
       if (hasWiki) {

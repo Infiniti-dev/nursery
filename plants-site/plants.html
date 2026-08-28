@@ -48,6 +48,28 @@
       </div>
     </section>
 
+    <section class="directory-tools">
+      <button type="button" id="toggle-add-plant" class="btn btn-secondary">➕ Add plant</button>
+      <button type="button" id="download-csv" class="btn btn-secondary">⬇ Download CSV</button>
+      <button type="button" id="download-notes" class="btn btn-secondary">⬇ Download notes</button>
+      <button type="button" id="download-varieties" class="btn btn-secondary">⬇ Download varieties</button>
+      <form id="add-plant-form" class="plant-form" hidden>
+        <label class="form-field"><span>Name</span><input type="text" name="name" required></label>
+        <label class="form-field"><span>Urdu name</span><input type="text" name="urdu_name"></label>
+        <label class="form-field"><span>Common names</span><input type="text" name="common_names"></label>
+        <label class="form-field"><span>Category</span><input type="text" name="category"></label>
+        <label class="form-field"><span>Wikipedia URL</span><input type="text" name="wikipedia_url"></label>
+        <label class="form-field"><span>Light</span><input type="text" name="light" placeholder="Full sun / Full sun / part shade / Partial shade"></label>
+        <label class="form-field"><span>Water requirement</span><input type="text" name="water"></label>
+        <label class="form-field"><span>Growing tips</span><textarea name="growing_tips" rows="2"></textarea></label>
+        <label class="form-field"><span>Mixed-garden tips</span><textarea name="garden_tips" rows="2"></textarea></label>
+        <label class="form-field"><span>Punjab (Pakistan) tips &amp; alternatives</span><textarea name="region_tips" rows="2"></textarea></label>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Add plant</button>
+        </div>
+      </form>
+    </section>
+
     <div id="loading" class="loading" aria-live="polite">
       <div class="spinner"></div>
       <p>Loading plant directory...</p>

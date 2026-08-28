@@ -37,6 +37,7 @@
           <div>
             <h2 id="plant-title"></h2>
             <p id="plant-urdu" class="plant-urdu"></p>
+            <p id="plant-common" class="plant-common" hidden></p>
           </div>
         </div>
         <div id="plant-light" class="light-badge" hidden></div>
@@ -51,6 +52,20 @@
         </div>
         <div class="plant-detail-body">
           <div id="plant-description" class="plant-description"></div>
+          <dl id="plant-care" class="plant-care" hidden>
+            <div class="plant-care-item" data-care="water" hidden>
+              <dt>💧 Water</dt><dd id="care-water"></dd>
+            </div>
+            <div class="plant-care-item" data-care="growing" hidden>
+              <dt>🌱 Growing tips</dt><dd id="care-growing"></dd>
+            </div>
+            <div class="plant-care-item" data-care="garden" hidden>
+              <dt>🪴 Mixed-garden tips</dt><dd id="care-garden"></dd>
+            </div>
+            <div class="plant-care-item" data-care="region" hidden>
+              <dt>📍 Punjab (Pakistan) tips &amp; alternatives</dt><dd id="care-region"></dd>
+            </div>
+          </dl>
           <div id="plant-detail-actions" class="plant-detail-actions" hidden>
             <button type="button" id="detail-fav-btn" class="btn btn-fav" aria-pressed="false">♡ Favourite</button>
             <div class="qty-selector qty-selector-detail" id="detail-qty">
@@ -58,6 +73,11 @@
               <input type="number" min="1" value="1" class="qty-input" aria-label="Quantity">
               <button type="button" data-qty="1" aria-label="Increase quantity">+</button>
             </div>
+            <button type="button" id="detail-edit-btn" class="btn btn-secondary" hidden>Edit</button>
+          </div>
+          <div id="plant-notes-block" class="plant-notes-block" hidden>
+            <label for="plant-notes-input">Your notes</label>
+            <textarea id="plant-notes-input" rows="3" placeholder="Add notes for this plant…"></textarea>
           </div>
           <div class="plant-detail-links">
             <a id="plant-wikipedia" href="" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Read on Wikipedia</a>
