@@ -4,17 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Plant Details — Pakistan Plant Directory</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=1">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <script src="icons.js"></script>
+  <script src="icons.js?v=1"></script>
 </head>
 <body>
   <header class="header">
-    <h1><a href="plants.html">Pakistan Plant Directory</a></h1>
+    <h1><a href="plants.html?v=1">Pakistan Plant Directory</a></h1>
     <p class="tagline">Plant details</p>
     <nav>
-      <a href="../index.html" class="nav-link">Sale Report</a>
-      <a href="plants.html" class="nav-link">Directory</a>
+      <a href="../index.html?v=1" class="nav-link">Sale Report</a>
+      <a href="plants.html?v=1" class="nav-link">Directory</a>
     </nav>
   </header>
 
@@ -26,12 +26,12 @@
 
     <div id="error-detail" class="error" role="alert" hidden>
       <p>Could not load information for this plant. Wikipedia may be unavailable.</p>
-      <a href="plants.html" class="btn btn-secondary">Back to Directory</a>
+      <a href="plants.html?v=1" class="btn btn-secondary">Back to Directory</a>
     </div>
 
     <article id="plant-detail" class="plant-detail" hidden>
       <div class="plant-detail-header">
-        <a href="plants.html" class="back-link">← Back to Directory</a>
+        <a href="plants.html?v=1" class="back-link">← Back to Directory</a>
         <div class="plant-detail-title-row">
           <span id="plant-detail-icon" class="plant-detail-icon" aria-hidden="true"></span>
           <div>
@@ -80,7 +80,7 @@
     </article>
 
     <div id="invalid-plant" class="error" hidden>
-      <p>Plant not specified. <a href="plants.html">Browse the directory</a>.</p>
+      <p>Plant not specified. <a href="plants.html?v=1">Browse the directory</a>.</p>
     </div>
   </main>
 
@@ -88,7 +88,7 @@
     <p>Pakistan Landscaping &amp; Nursery Plant Directory</p>
   </footer>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=1"></script>
   <script>
     (function() {
       const init = window.PLANT_DIRECTORY_INIT;
