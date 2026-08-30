@@ -538,6 +538,11 @@
       alert('No favourites to export.');
       return;
     }
+    var selected = getSelectedFavourites();
+    if (selected.length === 0) {
+      alert('No plants selected. Tick the plants you want to include.');
+      return;
+    }
     var jsPDF = window.jspdf && window.jspdf.jsPDF;
     if (!jsPDF) {
       alert('PDF library not loaded.');
@@ -549,18 +554,19 @@
       btn.textContent = 'Preparing PDF…';
     }
     loadUrduFont().catch(function() { return null; }).then(function(fontBase64) {
-      renderPdf(fontBase64);
+      renderPdf(fontBase64, selected);
     }).finally(function() {
       if (btn) {
         btn.disabled = false;
-        btn.textContent = 'Export Favourites as PDF';
+        btn.textContent = 'Export Selected as PDF';
       }
     });
   }
 
   // Each favourite prints as two rows: details, then its note (or a blank
   // underline to write on when printed).
-  function renderPdf(fontBase64) {
+  function renderPdf(fontBase64, list) {
+    list = list || favourites;
     var jsPDF = window.jspdf && window.jspdf.jsPDF;
     var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     if (fontBase64) {
@@ -586,7 +592,7 @@
     doc.text('Qty', col4, startY);
     startY += 7;
 
-    favourites.forEach(function(f) {
+    list.forEach(function(f) {
       var meta = favouriteMeta(f);
       var note = (notes[f.name] || '').trim();
       var common = (meta.common_names || '').trim();
@@ -646,24 +652,121 @@
     doc.save('plant-favourites.pdf');
   }
 
+  // ---- Favourites backup (export/import JSON, includes per-plant notes) ----
+  function exportFavouritesJson() {
+    if (favourites.length === 0) {
+      alert('No favourites to export.');
+      return;
+    }
+    var notes = getNotes();
+    var favNotes = {};
+    favourites.forEach(function(f) {
+      if (notes[f.name]) favNotes[f.name] = notes[f.name];
+    });
+    var payload = {
+      version: 1,
+      exported_at: new Date().toISOString(),
+      favourites: favourites,
+      notes: favNotes
+    };
+    triggerDownload('plant-favourites-backup.json', JSON.stringify(payload, null, 2), 'application/json');
+  }
+
+  // Merge imported favourites into the current list: an existing plant keeps the
+  // higher quantity; new plants are added; notes fill in only where none exists.
+  function importFavouritesJson(file) {
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function() {
+      var data;
+      try {
+        data = JSON.parse(reader.result);
+      } catch (e) {
+        alert('Could not read that file — it is not valid JSON.');
+        return;
+      }
+      var incoming = Array.isArray(data) ? data : (data && data.favourites);
+      if (!Array.isArray(incoming)) {
+        alert('That file does not contain a favourites list.');
+        return;
+      }
+      var byName = {};
+      favourites.forEach(function(f) { byName[f.name] = f; });
+      var added = 0;
+      incoming.forEach(function(f) {
+        if (!f || !f.name) return;
+        var qty = Math.max(1, parseInt(f.quantity, 10) || 1);
+        if (byName[f.name]) {
+          var cur = Math.max(1, parseInt(byName[f.name].quantity, 10) || 1);
+          byName[f.name].quantity = Math.max(cur, qty);
+        } else {
+          var entry = { name: f.name, urdu_name: f.urdu_name || '', quantity: qty };
+          if (f.category) entry.category = f.category;
+          if (f.base) entry.base = f.base;
+          if (f.variety) entry.variety = f.variety;
+          favourites.push(entry);
+          byName[f.name] = entry;
+          added++;
+        }
+      });
+      var incomingNotes = (data && data.notes) || {};
+      var existingNotes = getNotes();
+      var notesAdded = 0;
+      Object.keys(incomingNotes).forEach(function(name) {
+        var have = existingNotes[name] && existingNotes[name].trim();
+        if (!have && incomingNotes[name]) {
+          setNote(name, incomingNotes[name]);
+          notesAdded++;
+        }
+      });
+      setFavourites(favourites.slice());
+      alert('Imported: ' + added + ' new plant(s) added, ' + notesAdded + ' note(s) restored. Existing favourites kept.');
+    };
+    reader.readAsText(file);
+  }
+
+  // Which favourites are ticked for PDF export. Read live from the checkboxes so
+  // the selection survives re-renders (quantity/note edits) without extra state.
+  function getSelectedFavourites() {
+    var listEl = document.getElementById('favourites-list');
+    if (!listEl) return favourites.slice();
+    var checked = {};
+    listEl.querySelectorAll('.fav-select').forEach(function(cb) {
+      if (cb.checked) checked[cb.getAttribute('data-name')] = true;
+    });
+    return favourites.filter(function(f) { return checked[f.name]; });
+  }
+
+  function updateFavSelectedCount() {
+    var countEl = document.getElementById('fav-selected-count');
+    var allCb = document.getElementById('fav-select-all');
+    var selected = getSelectedFavourites().length;
+    if (countEl) countEl.textContent = selected + ' of ' + favourites.length + ' selected';
+    if (allCb) allCb.checked = selected > 0 && selected === favourites.length;
+  }
+
   function renderFavouritesSection() {
     var section = document.getElementById('favourites-view');
     var listEl = document.getElementById('favourites-list');
+    var selectAllRow = document.getElementById('favourites-select-all');
     if (!section || !listEl) return;
     var isFavView = window.location.hash === '#favourites';
     if (!isFavView) return;
     if (favourites.length === 0) {
       listEl.innerHTML = '<p class="favourites-empty">No favourites yet. Go to <a href="plants.html">Directory</a> to add plants.</p>';
+      if (selectAllRow) selectAllRow.hidden = true;
       section.hidden = false;
       return;
     }
     section.hidden = false;
+    if (selectAllRow) selectAllRow.hidden = false;
     var notes = getNotes();
     listEl.innerHTML = favourites.map(function(f) {
       var qty = Math.max(1, parseInt(f.quantity, 10) || 1);
       return (
         '<div class="fav-item" data-name="' + escapeHtml(f.name) + '">' +
           '<div class="fav-item-main">' +
+            '<input type="checkbox" class="fav-select" data-name="' + escapeHtml(f.name) + '" checked aria-label="Include in export">' +
             '<span class="fav-item-name">' + escapeHtml(f.name) + '</span>' +
             '<span class="fav-item-urdu">' + escapeHtml(f.urdu_name || '') + '</span>' +
             '<div class="fav-item-qty">' +
@@ -681,6 +784,10 @@
       var name = row.getAttribute('data-name');
       var qtyInput = row.querySelector('input[data-action="input"]');
       var notesInput = row.querySelector('[data-action="notes"]');
+      var selectCb = row.querySelector('.fav-select');
+      if (selectCb) {
+        selectCb.addEventListener('change', updateFavSelectedCount);
+      }
       row.querySelector('[data-action="decrease"]').addEventListener('click', function() {
         updateFavQuantity(name, -1);
       });
@@ -701,6 +808,7 @@
         removeFavourite(name);
       });
     });
+    updateFavSelectedCount();
   }
 
   function escapeHtml(s) {
@@ -905,6 +1013,31 @@
 
     if (exportPdfBtn) exportPdfBtn.addEventListener('click', exportToPdf);
 
+    var exportFavBtn = document.getElementById('export-favourites');
+    if (exportFavBtn) exportFavBtn.addEventListener('click', exportFavouritesJson);
+    var importFavBtn = document.getElementById('import-favourites');
+    var importFavInput = document.getElementById('import-favourites-input');
+    if (importFavBtn && importFavInput) {
+      importFavBtn.addEventListener('click', function() { importFavInput.click(); });
+      importFavInput.addEventListener('change', function() {
+        var file = importFavInput.files && importFavInput.files[0];
+        importFavouritesJson(file);
+        importFavInput.value = '';
+      });
+    }
+    var selectAllCb = document.getElementById('fav-select-all');
+    if (selectAllCb) {
+      selectAllCb.addEventListener('change', function() {
+        var listEl = document.getElementById('favourites-list');
+        if (listEl) {
+          listEl.querySelectorAll('.fav-select').forEach(function(cb) {
+            cb.checked = selectAllCb.checked;
+          });
+        }
+        updateFavSelectedCount();
+      });
+    }
+
     var downloadCsvBtn = document.getElementById('download-csv');
     if (downloadCsvBtn) downloadCsvBtn.addEventListener('click', downloadCsv);
     var downloadNotesBtn = document.getElementById('download-notes');
@@ -914,9 +1047,29 @@
 
     var toggleAddBtn = document.getElementById('toggle-add-plant');
     var addPlantForm = document.getElementById('add-plant-form');
-    if (toggleAddBtn && addPlantForm) {
-      toggleAddBtn.addEventListener('click', function() {
-        addPlantForm.hidden = !addPlantForm.hidden;
+    var addPlantOverlay = document.getElementById('add-plant-overlay');
+
+    function openAddPlant() {
+      if (!addPlantOverlay) return;
+      addPlantOverlay.hidden = false;
+      var first = addPlantForm && addPlantForm.querySelector('[name="name"]');
+      if (first) first.focus();
+    }
+    function closeAddPlant() {
+      if (addPlantOverlay) addPlantOverlay.hidden = true;
+    }
+
+    if (toggleAddBtn && addPlantOverlay) {
+      toggleAddBtn.addEventListener('click', openAddPlant);
+    }
+    if (addPlantOverlay) {
+      addPlantOverlay.addEventListener('click', function(e) {
+        if (e.target === addPlantOverlay) closeAddPlant();
+      });
+      var cancelAdd = addPlantOverlay.querySelector('[data-action="cancel-add"]');
+      if (cancelAdd) cancelAdd.addEventListener('click', closeAddPlant);
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && !addPlantOverlay.hidden) closeAddPlant();
       });
     }
     if (addPlantForm) {
@@ -941,7 +1094,7 @@
           });
         }
         addPlantForm.reset();
-        addPlantForm.hidden = true;
+        closeAddPlant();
         runFilter();
       });
     }

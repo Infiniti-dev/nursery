@@ -53,22 +53,29 @@
       <button type="button" id="download-csv" class="btn btn-secondary">⬇ Download CSV</button>
       <button type="button" id="download-notes" class="btn btn-secondary">⬇ Download notes</button>
       <button type="button" id="download-varieties" class="btn btn-secondary">⬇ Download varieties</button>
-      <form id="add-plant-form" class="plant-form" hidden>
-        <label class="form-field"><span>Name</span><input type="text" name="name" required></label>
-        <label class="form-field"><span>Urdu name</span><input type="text" name="urdu_name"></label>
-        <label class="form-field"><span>Common names</span><input type="text" name="common_names"></label>
-        <label class="form-field"><span>Category</span><input type="text" name="category"></label>
-        <label class="form-field"><span>Wikipedia URL</span><input type="text" name="wikipedia_url"></label>
-        <label class="form-field"><span>Light</span><input type="text" name="light" placeholder="Full sun / Full sun / part shade / Partial shade"></label>
-        <label class="form-field"><span>Water requirement</span><input type="text" name="water"></label>
-        <label class="form-field"><span>Growing tips</span><textarea name="growing_tips" rows="2"></textarea></label>
-        <label class="form-field"><span>Mixed-garden tips</span><textarea name="garden_tips" rows="2"></textarea></label>
-        <label class="form-field"><span>Punjab (Pakistan) tips &amp; alternatives</span><textarea name="region_tips" rows="2"></textarea></label>
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary">Add plant</button>
-        </div>
-      </form>
     </section>
+
+    <div id="add-plant-overlay" class="modal-overlay" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="add-plant-title">
+        <h3 id="add-plant-title">Add plant</h3>
+        <form id="add-plant-form" class="plant-form">
+          <label class="form-field"><span>Name</span><input type="text" name="name" required></label>
+          <label class="form-field"><span>Urdu name</span><input type="text" name="urdu_name"></label>
+          <label class="form-field"><span>Common names</span><input type="text" name="common_names"></label>
+          <label class="form-field"><span>Category</span><input type="text" name="category"></label>
+          <label class="form-field"><span>Wikipedia URL</span><input type="text" name="wikipedia_url"></label>
+          <label class="form-field"><span>Light</span><input type="text" name="light" placeholder="Full sun / Full sun / part shade / Partial shade"></label>
+          <label class="form-field"><span>Water requirement</span><input type="text" name="water"></label>
+          <label class="form-field"><span>Growing tips</span><textarea name="growing_tips" rows="2"></textarea></label>
+          <label class="form-field"><span>Mixed-garden tips</span><textarea name="garden_tips" rows="2"></textarea></label>
+          <label class="form-field"><span>Punjab (Pakistan) tips &amp; alternatives</span><textarea name="region_tips" rows="2"></textarea></label>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" data-action="cancel-add">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add plant</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <div id="loading" class="loading" aria-live="polite">
       <div class="spinner"></div>
@@ -93,7 +100,14 @@
     <section id="favourites-view" class="favourites-section" hidden>
       <h2>Your Favourites</h2>
       <div class="favourites-actions">
-        <button type="button" id="export-pdf" class="btn btn-primary">Export Favourites as PDF</button>
+        <button type="button" id="export-pdf" class="btn btn-primary">Export Selected as PDF</button>
+        <button type="button" id="export-favourites" class="btn btn-secondary">⬇ Export Favourites</button>
+        <button type="button" id="import-favourites" class="btn btn-secondary">⬆ Import Favourites</button>
+        <input type="file" id="import-favourites-input" accept="application/json,.json" hidden>
+      </div>
+      <div id="favourites-select-all" class="favourites-select-all" hidden>
+        <label><input type="checkbox" id="fav-select-all" checked> Select all</label>
+        <span id="fav-selected-count" class="fav-selected-count"></span>
       </div>
       <div id="favourites-list" class="favourites-list"></div>
     </section>
